@@ -1,0 +1,177 @@
+#! /bin/bash
+
+# It's really difficult to test just commands. The following tests have been
+# written to assume at least file redirections and very basic variable
+# functionality have been implemented.
+# NOTE: running with bash requires wait $!, for writes to files to finish
+#   before running diff. When used to actually test parsh, parsh will
+#    automatically wait for the writes, so remember to remove that line.
+
+# TODO: once variables are fully implemented, update the loop tests.
+
+# Test these elsewhere?
+# alias bg cd command false fc fg getopts jobs kill newgrp pwd
+# read true umask unalias wait
+
+ret=0
+
+# Regular command: this must succeed for rest of tests to pass
+echo 1 > tmp1
+
+# Pipelines
+echo -e 0\\n1 | tail -n1 > tmp2
+if ! diff tmp1 tmp2 > /dev/null
+then echo "  Pipelines test failed."
+     ret=1
+fi
+
+# Lists
+# Asynchronous lists
+echo 2 > tmp1
+echo 2 > tmp2 & echo 2 > tmp3 &
+wait $!
+if ! diff --from-file=tmp1 tmp2 tmp3 > /dev/null
+then echo "  Asynchronous list test failed."
+     ret=1
+fi
+
+# Sequential lists
+echo 3 > tmp1
+echo 3 > tmp2; echo 3 > tmp3
+if ! diff --from-file=tmp1 tmp2 tmp3 > /dev/null
+then echo "  Sequential list test failed."
+     ret=1
+fi
+
+# AND lists
+echo 1 > tmp1;
+true && echo 1 > tmp2
+false && echo 0 > tmp2
+if ! diff tmp1 tmp2 > /dev/null
+then echo "  AND test failed." 
+     ret=1
+fi
+
+# OR lists
+echo 2 > tmp1
+false || echo 2 > tmp2
+true || echo 0 > tmp2
+if ! diff tmp1 tmp2 > /dev/null
+then echo "  OR test failed." 
+     ret=1
+fi
+
+# AND-OR lists
+echo 3 > tmp1
+true && echo 3 > tmp2 || echo 0 > tmp2
+false && echo 0 > tmp3 || echo 3 > tmp3
+if ! diff --from-file=tmp1 tmp2 tmp3 > /dev/null
+then echo "  AND-OR test failed."
+     ret=1
+fi
+
+
+# Compound Commands
+# Grouping commands
+echo 1 > tmp1
+x=1
+(echo 1 > tmp2; echo 1 > tmp3; x=0)
+echo $x > tmp4
+if ! diff --from-file=tmp1 tmp2 tmp3 tmp4 > /dev/null
+then echo "  () test failed."
+     ret=1
+fi
+
+echo 2 > tmp1
+{ echo 2 > tmp2; echo 2 > tmp3; x=2; }
+echo $x > tmp4
+if ! diff --from-file=tmp1 tmp2 tmp3 tmp4 > /dev/null
+then echo "  {} test failed."
+     ret=1
+fi
+
+# FOR command
+echo -e 0\\n1\\n2\\n3 > tmp1
+echo 0 > tmp2
+for i in 1 2 3
+do
+  echo $i >> tmp2
+done
+
+if ! diff tmp1 tmp2 > /dev/null
+then echo "  FOR test failed."
+     ret=1
+fi
+
+# Case command
+echo 1 > tmp1
+x=bar
+case $x in
+  foo) echo 0 > tmp2;;
+  bar) echo 1 > tmp2
+esac
+
+if ! diff tmp1 tmp2 > /dev/null
+then echo "CASE test failed."
+     ret=1
+fi
+
+# IF conditional
+echo 2 > tmp1
+if true
+then echo 2 > tmp2
+else echo 1 > tmp2
+fi
+
+if false
+then echo 1 > tmp3
+else echo 2 > tmp3
+fi
+
+if false
+then echo 0 > tmp4
+elif false
+  then echo 1 > tmp4
+  else echo 2 > tmp4
+fi
+
+if ! diff --from-file=tmp1 tmp2 tmp3 > /dev/null
+then echo "IF test failed."
+     ret=1
+fi
+
+# WHILE loop
+echo -e 1\\n1\\n1\\n1 > tmp1
+echo 1 > tmp2
+
+while ! diff tmp1 tmp2 > /dev/null
+do echo 1 >> tmp2; done
+
+if ! diff tmp1 tmp2 > /dev/null
+then echo "WHILE test failed."
+     ret=1
+fi
+
+# UNTIL loop
+echo -e 2\\n2\\n2\\n2 > tmp1
+echo 2 > tmp2
+
+until diff tmp1 tmp2 > /dev/null
+do echo 2 >> tmp2; done
+
+if ! diff tmp1 tmp2 > /dev/null
+then echo "UNTIL test failed."
+     ret=1
+fi
+
+# Function definition
+echo 3 > tmp1
+testfunc() { echo $1 > tmp2; }
+testfunc 3
+if ! diff tmp1 tmp2 > /dev/null
+then echo "Function definition test failed."
+     ret=1
+fi
+
+rm tmp1 tmp2 tmp3 tmp4
+exit $ret

@@ -1,0 +1,21 @@
+#! /bin/bash
+
+# From 2008 POSIX:
+# Quoting - handled by parser
+# Token recognition - handled by parser
+# Reserved words - handled by parser
+# Parameters and Variables
+# Word Expansions 
+# Redirection
+# Exit Status and Errors
+# Shell Commands
+echo "Testing shell commands"
+if ./tests/test-shell-commands
+then echo "  All shell commands tests passed!"; fi
+
+# Shell Grammar - handled by parser
+# Signals and Error Handling - are signals testable?
+# Shell Execution Environment
+# Pattern Matching
+# Special Built-In Utilities
+

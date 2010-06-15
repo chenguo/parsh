@@ -1,0 +1,11 @@
+PARSH README
+
+
+============
+INTRODUCTION
+============
+
+  Parsh, the Parallel Dependency Shell, attempts to automate parallel execution
+of commands whenever possible, without any extra effort from script writers or
+generation programs.
+
