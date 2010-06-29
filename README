@@ -9,3 +9,81 @@ INTRODUCTION
 of commands whenever possible, without any extra effort from script writers or
 generation programs.
 
+  As a brief architectural summary, Parsh has three main threads: a parser, an
+evaluator, and a reaper. These threads all communicate with a central
+dependency graph structure to determine which commands are runnable and which
+must wait.
+
+  The parser takes input from the user or a script, parses the commands from
+them, and adds them to the graph. The act of adding to the graph establishes
+the initial depdency status of the command; evaluation of queued commands will
+alter this dependency status.
+
+  The evaluator makes use of the concept of a "frontier," which is a list of
+nodes in the graph that are runnable. The dependency graph has taken care of
+all matters of dependency and control flow, thus the evaluator only needs to
+mindlessly evaluate the next command in the frontier list.
+
+  The reaper catches signals sent by exiting processes, removes the
+appropriate nodes in the graph, and re-evaluates the dependency status of
+related commands, possibly marking them as runnable.
+
+
+============
+Dependencies
+============
+
+  There are three types of dependencies in Parsh:
+
+  1) File dependencies: commands attempting to access the same file are
+considered to collide if at least one is not a read access. The structure
+for a file dependency has the following fields:
+
+  inode #: primary way of identifying files, since with inode numbers there is
+no need to worry about links.
+  absolute path: for resolving the inode # of a link, and as a secondary way
+of identifying a file when an inode # is not available (i.e. the file has yet
+to be created).
+  read/write: access type to determine dependency
+
+  2) Control flow dependencies: some commands must know another's exit status
+to determine whether to run or not. These maybe a command inside an IF
+statement, or a command waiting to see if control flow reaches a BREAK. A
+simple IF-like dependency (IF, ||, UNTIL and the such) are handled solely
+within the dependency grpah. A CONTINUE or BREAK dependency is more
+complicated, and thus requires its own data structure.
+
+  nest level: the true level the CONTINUE or BREAK statement belongs to. For
+example, a BREAK 2 nested 4 levels deep acts on other commands at nest level
+2 or greater.
+  parent: to follow the nest chain up.
+  iteration: loop iteration. For nested loops, this is the iteration of the
+innermost loop. If the iteration of an outer loop is needed, the parent
+pointer should be followed.
+
+  Note that in order to establish a dependency, a command must be at or below
+the same nest level. For CONTINUE, to be at the same iteration is a
+requirement, while for BREAK the command needs to be at the same or a later
+iteration in the nest level of the BREAK command.
+
+  3) Variable dependencies: variables use static single assignment form, thus
+there is never a value collision. Rather, the only variable dependencies in
+Parsh will be a command waiting for a delayed value resolution. This will be
+explained in more detail in the variables section.
+
+
+  For file dependencies, each file is given a node in a list. (TODO: make a
+tree?) Each file node contains the fields listed above. Each accessor command
+will enqueue itself, with a pointer pointing at the next waiting command.
+Multiple accessors are allowed, if they are all of the read variety. Upon a
+command finishing, the files it accesses automatically sets the next waiting
+command(s) to run.
+
+  Control flow dependencies are handled internally in the graph. A graph node
+representing some control flow object will keep a list of dependent commands,
+and upon branch decision will add the appropriate commands to the frontier.
+
+  Variable dependencies are handled by the variable module. For the scope of
+this section, it will be sufficient to say that a variable whose value is not
+yet ready counts towards a graph node's dependencies, and upon the value
+becoming available the graph node will be updated.
