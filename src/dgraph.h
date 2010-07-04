@@ -1,4 +1,4 @@
-/* Header for dependency graph. 
+/* Header for dependency graph.
    Copyright (C) 2010 Chen Guo
 
    This program is free software: you can redistribute it and/or modify
