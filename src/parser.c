@@ -17,22 +17,26 @@
    Written by Chen Guo, chenguo4@ucla.edu.  */
 
 #include <stdio.h>
+#include <stdlib.h>
 
-#define PROMPT "$"
+#define PROMPT "$ "
 #define DEFAULT_INBUF_SIZE 1024
 
-
-static const char *inbuf;
+char *inbuf;
 static int bufsiz;
 
 static void readline (FILE *input);
 
 
 /* Initialize the parser. */
-void init_parser (void)
+void init_parser (FILE *input)
 {
+  /* Initialize input buffer. TODO: remove arbitrary linesize limit. */
   bufsiz = DEFAULT_INBUF_SIZE;
   inbuf = malloc (bufsiz);
+
+  /* Open input stream. */
+  /* fopen (input, 'r'); */
 }
 
 /* Print prompt. */
@@ -45,11 +49,13 @@ void print_prompt (void)
 void parse_command (FILE *input)
 {
   readline (input);
-  printf ("input", %s);
 }
 
-/* Read a line of the command. */
+/* Read a token of the command. Return the length of the line
+   read. */
 static void readline (FILE *input)
 {
-  fgets (readline_buf, bufsiz, input);
+  int status;
+  if (!(status = fgets (inbuf, bufsiz, input)))
+    abort ();
 }

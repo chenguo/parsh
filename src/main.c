@@ -19,6 +19,7 @@
 
 #include <pthread.h>
 #include <stdio.h>
+#include <unistd.h>
 
 static void parse_loop (void);
 
@@ -31,12 +32,12 @@ int main (void)
 static void
 parse_loop (void)
 {
-  FILE *input = STDIN;
-  init_parser ();
+  FILE *input = stdin;
+  init_parser (input);
 
   for (;;)
     {
-      prompt ();
+      print_prompt ();
       parse_command (input);
     }
 }

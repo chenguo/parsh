@@ -1,4 +1,5 @@
-all: src/Makefile
+all:
+	@make -C src/
 
 
 check:
