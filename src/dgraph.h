@@ -45,15 +45,7 @@ struct dg_node
   struct dg_node *prev;          /* Previous node in frontier. */
 };
 
-/* Frontier. */
-struct dg_frontier
-{
-  struct dg_node *run_list;      /* Running/runnable commands. */
-  struct dg_node *run_next;      /* Next runnable command. */
-  struct dg_node *tail;          /* Tail of frontier. */
-  int eof;                       /* End of file flag. */
-  pthread_mutex_t *dg_lock;      /* Directed graph lock. */
-  pthread_cond_t *dg_cond;       /* Conditional variable for lock. */
-};
+void dg_add (union command *);
+void dg_remove (struct dg_node *);
 
 #endif
