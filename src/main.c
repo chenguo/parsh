@@ -21,23 +21,58 @@
 #include <stdio.h>
 #include <unistd.h>
 
-static void parse_loop (void);
+#include "dgraph.h"
 
+#define PROMPT "$ "
+
+static void *eval_loop (void *);
+static void *parse_loop (void *);
+static void *reap_loop (void *);
+static void print_prompt (void);
 
 int main (void)
 {
-  parse_loop ();
+  pthread_t eval;
+  pthread_t reap;
+
+  pthread_create (&eval, NULL, eval_loop, NULL);  
+  pthread_create (&reap, NULL, reap_loop, NULL);
+
+  parse_loop (NULL);
 }
 
-static void
-parse_loop (void)
+/* Eval loop. */
+static void *
+eval_loop (void *ignore)
+{
+
+}
+
+/* Parse lopp. */
+static void *
+parse_loop (void *ignore)
 {
   FILE *input = stdin;
-  init_parser (input);
+  union command *cmd;
+
+  parse_init (input);
+
 
   for (;;)
     {
       print_prompt ();
-      parse_command (input);
+      parse_input (input);
     }
+}
+
+/* Reap loop. */
+static void *
+reap_loop (void *ignore)
+{}
+
+/* Print prompt. */
+static void
+print_prompt (void)
+{
+  printf (PROMPT);
 }

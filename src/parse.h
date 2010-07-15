@@ -19,11 +19,9 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#inlcude <stdio.h>
+#include <stdio.h>
 
-void init_parser (void);
-void print_prompt (void);
-void parse_command (FILE *input);
-
+void parse_init (FILE *input);
+void parse_input (FILE *input);
 
 #endif

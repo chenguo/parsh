@@ -30,7 +30,7 @@ struct dg_frontier
   struct dg_node *run_list;      /* Running/runnable commands. */
   struct dg_node *run_next;      /* Next runnable command. */
   struct dg_node *tail;          /* Tail of frontier. */
-  bool eof;                       /* End of file flag. */
+  bool eof;                      /* End of file flag. */
   pthread_mutex_t *dg_lock;      /* Directed graph lock. */
   pthread_cond_t *dg_cond;       /* Conditional variable for lock. */
 };
