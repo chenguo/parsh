@@ -1,10 +1,10 @@
 all: parsh
 
-parsh: main.o parser.o
-	gcc -o parsh main.o parser.o
+parsh: main.o parse.o
+	gcc -lpthread -o ../parsh main.o parse.o
 
 main.o: main.c
 	gcc -O -c main.c
 
-parser.o: parser.c parser.h
-	gcc -O -c parser.c
+parser.o: parser.c parse.h
+	gcc -O -c parse.c
