@@ -23,8 +23,12 @@
 
 #include "command.h"
 #include "dgraph.h"
+#include "eval.h"
 #include "frontier.h"
 #include "parse.h"
+
+#include "parsh.h"
+
 
 #define PROMPT "$ "
 
@@ -33,8 +37,18 @@ static void *parse_loop (void *);
 static void *reap_loop (void *);
 static void print_prompt (void);
 
-int main (void)
+static void parsh_init ()
 {
+#ifdef DEBUG
+  dbg = fopen ("debug", "w");
+#endif
+}
+
+int
+main (void)
+{
+  parsh_init ();
+
   pthread_t eval;
   pthread_t reap;
 
@@ -53,9 +67,14 @@ int main (void)
 static void *
 eval_loop (void *ignore)
 {
+  struct dg_node *command;
+
+  DBG("Eval loop initiated.\n");
   for (;;)
     {
+      command = frontier_run ();
 
+      eval_cmd (command);
     }
   return NULL;
 }
@@ -69,11 +88,15 @@ parse_loop (void *ignore)
 
   parse_init (input);
 
+  DBG("Parse loop initiated.\n");
   for (;;)
     {
       /* Construct command tree. */
       print_prompt ();
       cmd = parse_input (input);
+
+      /* Add return command to graph. */
+      dg_add (cmd);
     }
   return NULL;
 }

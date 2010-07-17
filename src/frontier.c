@@ -21,6 +21,7 @@
 #include <stdbool.h>
 
 #include "dgraph.h"
+#include "parsh.h"
 
 #include "frontier.h"
 
@@ -47,11 +48,13 @@ void
 frontier_lock (void)
 {
   pthread_mutex_lock (&dg_lock);
+  DBG("MUTEX LOCKED\n");
 }
 
 void
 frontier_unlock (void)
 {
+  DBG("MUTEX UNLOCKED\n");
   pthread_mutex_unlock (&dg_lock);
 }
 
@@ -60,8 +63,6 @@ frontier_unlock (void)
 void
 frontier_add (struct dg_node *node)
 {
-  DG_LOCK;
-
   /* If RUN LIST is empty, NODE is the only command
      in the graph. */
   if (!frontier.run_list)
@@ -78,9 +79,8 @@ frontier_add (struct dg_node *node)
   frontier.tail = node;
 
   /* Signal threads waiting on cond var. */
+  DBG("FRONTIER_ADD: cond signal\n");
   pthread_cond_signal (&dg_cond);
-
-  DG_UNLOCK;
 }
 
 
@@ -94,7 +94,9 @@ frontier_run (void)
   /* Conditional wait until RUN NEXT is available. */
   while (!frontier.run_next)
     {
+      DBG("FRONTIER_RUN: waiting.\n");
       pthread_cond_wait (&dg_cond, &dg_lock);
+      DBG("FRONTIER_RUN: got run_next\n");
     }
   run = frontier.run_next;
 

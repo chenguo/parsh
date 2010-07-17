@@ -1,4 +1,4 @@
-/* Dependency graph.
+/* Parsh, the Parallel Shell.
    Copyright (C) 2010 Chen Guo
 
    This program is free software: you can redistribute it and/or modify
@@ -16,38 +16,14 @@
 
    Written by Chen Guo, chenguo4@ucla.edu.  */
 
-#include <stdlib.h>
+#include <stdio.h>
 
-#include "command.h"
-#include "frontier.h"
-#include "parsh.h"
+#define DEBUG
 
-#include "dgraph.h"
+FILE *dbg;
 
-
-static struct dg_node * dg_create (union command *);
-
-void
-dg_add (union command *cmd)
-{
-  DG_LOCK;
-
-  /* Create node for command. */
-  struct dg_node *new_node = dg_create (cmd);
-
-  /* For now, just straight add it. */
-  /* Add to frontier. */
-  DBG("DG_ADD: add new node to frontier.\n");
-  frontier_add (new_node);
-  DG_UNLOCK;
-}
-
-static struct dg_node *
-dg_create (union command *cmd)
-{
-  /* Calloc to start with all NULL fields. */
-  struct dg_node *new_node = calloc (1, sizeof *new_node);
-  new_node->cmd = cmd;
-
-  return new_node;
-}
+#ifdef DEBUG
+#define DBG(msg...) fprintf (dbg, msg);
+#else
+#define DBG(msg...)
+#endif

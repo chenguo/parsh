@@ -22,13 +22,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-//tmp
-#include <unistd.h>
-
 #include "command.h"
 #include "dgraph.h"
+#include "parsh.h"
 
 #include "parse.h"
+
 
 /* HUGE TODO: make it so that there's no arbitrary input line limit. */
 #define DEFAULT_INBUF_SIZE 1024
@@ -126,11 +125,11 @@ parse_token (FILE *input)
          TODO: support character delineation by these characters.
          TODO: make robust.
 	 TODO: optimize this conditional. */
-      while (linbuf.ptr < linbuf.lim 
+      while (linbuf.ptr < linbuf.lim
              && !(isspace (*linbuf.ptr) && !(esc | s_quote | d_quote)))
         {
           char c = *linbuf.ptr;
-          //printf ("%p, %p, %c:%d\n", linbuf.ptr, linbuf.lim, c, c);
+          //DBG("%p, %p, %c:%d\n", linbuf.ptr, linbuf.lim, c, c);
           switch (c)
             {
             case '\\':
@@ -196,7 +195,7 @@ print_args (struct arglist *args)
 {
   while (args)
     {
-      printf ("Token: %s\n", args->arg);
+      DBG("Token: %s\n", args->arg);
       args = args->next;
     }
 }
@@ -213,14 +212,6 @@ parse_command (struct arglist *args)
   cmdtree->type = COMMAND;
   cmdtree->ccmd.cmd = args->arg;
   cmdtree->ccmd.args = args->next;
-
-  /* Free allocated memory. */
-  struct arglist *tmp_arg = args;
-  while (args) {
-    tmp_arg = args->next;
-    free (args);
-    args = tmp_arg;
-  }
 
   return cmdtree;
 }
