@@ -21,7 +21,9 @@
 
 #include <stdio.h>
 
+# include "command.h"
+
 void parse_init (FILE *input);
-void parse_input (FILE *input);
+union command * parse_input (FILE *input);
 
 #endif

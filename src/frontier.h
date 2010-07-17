@@ -20,21 +20,26 @@
 #define FRONTIER_H
 
 #include <stdbool.h>
-#include <phread.h>
+#include <pthread.h>
 
 #include "dgraph.h"
 
 /* Frontier. */
-struct dg_frontier
+struct frontier
 {
   struct dg_node *run_list;      /* Running/runnable commands. */
   struct dg_node *run_next;      /* Next runnable command. */
   struct dg_node *tail;          /* Tail of frontier. */
   bool eof;                      /* End of file flag. */
-  pthread_mutex_t *dg_lock;      /* Directed graph lock. */
-  pthread_cond_t *dg_cond;       /* Conditional variable for lock. */
 };
 
+void frontier_init (void);
+void frontier_lock (void);
+void frontier_unlock (void);
 void frontier_add (struct dg_node *);
+struct dg_node * frontier_run (void);
+
+#define DG_LOCK frontier_lock ();
+#define DG_UNLOCK frontier_unlock ();
 
 #endif

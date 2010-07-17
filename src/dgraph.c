@@ -16,10 +16,33 @@
 
    Written by Chen Guo, chenguo4@ucla.edu.  */
 
+#include <stdlib.h>
+
+#include "command.h"
+#include "frontier.h"
+
+#include "dgraph.h"
+
+
+static struct dg_node * dg_create (union command *);
+
 void
 dg_add (union command *cmd)
 {
+  /* Create node for command. */
+  struct dg_node *new_node = dg_create (cmd);
 
+  /* For now, just straight add it. */
+  /* Add to frontier. */
+  frontier_add (new_node);
+}
 
+static struct dg_node *
+dg_create (union command *cmd)
+{
+  /* Calloc to start with all NULL fields. */
+  struct dg_node *new_node = calloc (1, sizeof *new_node);
+  new_node->cmd = cmd;
 
+  return new_node;
 }

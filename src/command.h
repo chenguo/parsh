@@ -39,6 +39,7 @@ struct arglist;
 struct ccmd
 {
   int type;                      /* Type. */
+  char *cmd;                     /* The command. */
   struct arglist *args;          /* List of arguments. */
 };
 
@@ -58,7 +59,7 @@ struct arglist
 union command
 {
   int type;
-  struct ccmd cmd;
+  struct ccmd ccmd;
   struct cif cif;
 };
 

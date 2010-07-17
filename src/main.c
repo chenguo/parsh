@@ -21,7 +21,10 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include "command.h"
 #include "dgraph.h"
+#include "frontier.h"
+#include "parse.h"
 
 #define PROMPT "$ "
 
@@ -35,17 +38,26 @@ int main (void)
   pthread_t eval;
   pthread_t reap;
 
+  /* Initialize the frontier. */
+  
+
+  /* Start the loops. */
   pthread_create (&eval, NULL, eval_loop, NULL);  
   pthread_create (&reap, NULL, reap_loop, NULL);
-
   parse_loop (NULL);
+
+  return 0;
 }
 
 /* Eval loop. */
 static void *
 eval_loop (void *ignore)
 {
+  for (;;)
+    {
 
+    }
+  return NULL;
 }
 
 /* Parse lopp. */
@@ -57,18 +69,21 @@ parse_loop (void *ignore)
 
   parse_init (input);
 
-
   for (;;)
     {
+      /* Construct command tree. */
       print_prompt ();
-      parse_input (input);
+      cmd = parse_input (input);
     }
+  return NULL;
 }
 
 /* Reap loop. */
 static void *
 reap_loop (void *ignore)
-{}
+{
+  return NULL;
+}
 
 /* Print prompt. */
 static void

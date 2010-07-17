@@ -32,13 +32,12 @@ struct dg_list
 /* Dependency graph node. */
 struct dg_node
 {
-  int type;                      /* Type of command. */
   int dependencies;              /* Dependencies. */
   struct dg_list *dependents;    /* Dependent nodes. */
   struct dg_node *parent;        /* Parent node. */
-  /* Command. */
+  union command *cmd;            /* Command. */
   /* Loop control. */
-  unsigned long iteration;       /* Iteration of parent loop. */
+  unsigned long iter;             /* Iteration of parent loop. */
   int nest;                      /* Nest level of command. */
   /* Frontier control. */
   struct dg_node *next;          /* Next node in frontier. */
