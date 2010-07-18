@@ -74,6 +74,7 @@ eval_loop (void *ignore)
     {
       command = frontier_run ();
 
+      DBG("EVAL_LOOP: got cmd.\n");
       eval_cmd (command);
     }
   return NULL;
@@ -95,8 +96,11 @@ parse_loop (void *ignore)
       print_prompt ();
       cmd = parse_input (input);
 
-      /* Add return command to graph. */
-      dg_add (cmd);
+      if (cmd)
+	{
+	  /* Add return command to graph. */
+	  dg_add (cmd);
+	}
     }
   return NULL;
 }

@@ -63,11 +63,14 @@ frontier_unlock (void)
 void
 frontier_add (struct dg_node *node)
 {
-  /* If RUN LIST is empty, NODE is the only command
-     in the graph. */
+  /* Insert NODE into runnables list. */
   if (!frontier.run_list)
     {
       frontier.run_list = node;
+      frontier.run_next = node;
+    }
+  else if (!frontier.run_next)
+    {
       frontier.run_next = node;
     }
   /* Set NODE as TAIL. */
@@ -96,7 +99,7 @@ frontier_run (void)
     {
       DBG("FRONTIER_RUN: waiting.\n");
       pthread_cond_wait (&dg_cond, &dg_lock);
-      DBG("FRONTIER_RUN: got run_next\n");
+      DBG("FRONTIER_RUN: got run_next: %p\n", frontier.run_next);
     }
   run = frontier.run_next;
 
