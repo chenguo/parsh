@@ -227,6 +227,10 @@ parse_input (FILE *input)
 
   /* Break down the line into tokens. */
   struct arglist *args = parse_token (input);
+  if (!args)
+    {
+      return NULL;
+    }
   print_args(args);
 
   /* Recursively process tokens and build command tree. */
