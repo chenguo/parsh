@@ -30,7 +30,7 @@
 
 
 /* HUGE TODO: make it so that there's no arbitrary input line limit. */
-#define DEFAULT_INBUF_SIZE 1024
+#define DEFAULT_INBUF_SIZE 9
 #define DEFAULT_TOKEN_SIZE 256
 
 struct buffer
@@ -99,9 +99,11 @@ parse_token (FILE *input)
 {
   struct arglist *args = NULL;
   struct arglist **argsp = &args;
+  char opc = '\0';
   bool esc = false;
   bool s_quote = false;
   bool d_quote = false;
+  bool op = false;
   size_t toksiz = 0;
 
   /* Until the end of the line. */
@@ -119,57 +121,125 @@ parse_token (FILE *input)
           linbuf.ptr++;
         }
     
-      /* Get next token. Provided that no quoting is in effect, this can
-         be delimited by any character from the following:
-           whitespace | & ; < > ( ) $
-         TODO: support character delineation by these characters.
-         TODO: make robust.
-	 TODO: optimize this conditional. */
-      while (linbuf.ptr < linbuf.lim
-             && !(isspace (*linbuf.ptr) && !(esc | s_quote | d_quote)))
+      /* Get next token. */
+      while (1)
         {
           char c = *linbuf.ptr;
-          //DBG("%p, %p, %c:%d\n", linbuf.ptr, linbuf.lim, c, c);
-          switch (c)
+          DBG("Buf left %d, %c:%d, e:%d s:%d d:%d\n", linbuf.lim - linbuf.ptr, c, c,
+              esc, s_quote, d_quote);
+
+          /* TODO: verify that this only happens at last byte
+             of buffer. I.e., could it happen that there's
+             more useful bytes after the '\0'? */
+          if (c == '\0')
             {
-            case '\\':
-              if (!esc)
-                esc = true;
-              else
-                rmescape (c);
-              break;
+              parse_readline (input);
+              continue;
+            }
 
-            case '"':
-              if (d_quote)
-                d_quote = false;
-              else if (!s_quote)
-                d_quote = true;
-              else
-                putc_tok (c);
-              break;
+          if (!(esc | s_quote | d_quote))
+            {
+              /* If not quoted: */
+              switch (c)
+                {
+                  /* Operators. */
+                case '&':
+                case '|':
+                case ';':
+                case '<':
+                case '>':
+                  if (tokbuf.ptr - tokbuf.buf == 0)
+                    {
+                      /* First character of a new operator. */
+                      putc_tok (c);
+                      op = true;
+                      opc = c;
+                      break;
+                    }
+                  else
+                    {
+                      /* TODO: 3 character <<- operator. */
+                      if (op)
+                        {
+                          if ((c == '&' && (opc == '&' || opc == '<'
+                                            || opc == '>'))
+                              || (c == '|' && (opc == '|' || opc == '>'))
+                              || (c == ';' && opc == ';')
+                              || (c == '<' && opc == '<')
+                              || (c == '>' && (opc == '>' || opc == '<')))
+                            {
+                              /* Unset operator flag. */
+                              op = false;
+                              putc_tok (c);
+                              linbuf.ptr++;
+                            }
+                          else
+                            ; /* TODO: Unrecognized operator. */
+                        }
+                      /* Else fall through: delineate previous token. */
+                      goto tokend;
+                    }
 
-            case '\'':
-              if (s_quote)
-                s_quote = false;
-              else if (!d_quote)
-                s_quote = true;
-              else
-                putc_tok (c);
-              break;
+                /* Quoting characters. */
+                case '\\':
+                  esc = true;
+                  if (op)
+                    goto tokend;
+                  break;
 
-            default:
-              putc_tok (c);
+                case '\'':
+                  s_quote = true;
+                  if (op)
+                    goto tokend;
+                  break;
+
+                case '"':
+                  d_quote = true;
+                  if (op)
+                    goto tokend;
+                  break;
+
+                default:
+                  if (isspace (c) || op)
+                    goto tokend;
+                  else
+                    putc_tok (c);
+                }
+            }
+          else
+            {
+              /* Quoted. */
+              switch (c)
+                {
+                  /* TODO: Handle escapes. */
+                case '\'':
+                  if (s_quote)
+                    s_quote = false;
+                  else
+                    rmescape (c);
+                    //putc_tok (c);
+                  break;
+
+                case '"':
+                  if (d_quote)
+                    d_quote = false;
+                  else
+                    putc_tok (c);
+                  break;
+
+                case '\n':
+                  printf ("> ");
+                  parse_readline (input);
+                  putc_tok (c);
+                  continue;
+
+                default:
+                  putc_tok (c);
+                }
             }
           linbuf.ptr++;
         }
-      /* We hit the buffer limit, before the end of the line.
-         Read in more. */
-      if (linbuf.ptr == linbuf.lim)
-        {
-          parse_readline (input);
-          continue;
-        }
-
+    tokend:
       /* Put token into arglist. */
       toksiz = tokbuf.ptr - tokbuf.buf;
       if (toksiz)
