@@ -125,8 +125,8 @@ parse_token (FILE *input)
       while (1)
         {
           char c = *linbuf.ptr;
-          DBG("Buf left %d, %c:%d, e:%d s:%d d:%d\n", linbuf.lim - linbuf.ptr, c, c,
-              esc, s_quote, d_quote);
+          DBG("Buf left %d, %c:%d, e:s:d:o %d%d%d%d\n", linbuf.lim - linbuf.ptr, c, c,
+              esc, s_quote, d_quote, op);
 
           /* TODO: verify that this only happens at last byte
              of buffer. I.e., could it happen that there's
@@ -177,6 +177,7 @@ parse_token (FILE *input)
                             ; /* TODO: Unrecognized operator. */
                         }
                       /* Else fall through: delineate previous token. */
+		      op = false;
                       goto tokend;
                     }
 
@@ -201,7 +202,10 @@ parse_token (FILE *input)
 
                 default:
                   if (isspace (c) || op)
-                    goto tokend;
+                    {
+                      op = false;
+                      goto tokend;
+                    }
                   else
                     putc_tok (c);
                 }
@@ -249,6 +253,7 @@ parse_token (FILE *input)
           (*argsp)->arg = malloc (toksiz * sizeof (char));
           /* Copy the token from the token buffer and reset token buffer. */
           memcpy ((*argsp)->arg, tokbuf.buf, toksiz);
+          DBG("Token: %s\n", (*argsp)->arg);
           tokbuf.ptr = tokbuf.buf;
           /* Update variables. */
           toksiz = 0;
