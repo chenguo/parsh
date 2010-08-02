@@ -23,7 +23,6 @@
 enum
   {
     COMMAND,
-    REDIRECT,
     IF,
     FOR,
     WHILE,
@@ -32,27 +31,50 @@ enum
     SUBSHELL
   };
 
+enum
+  {
+    FILE_IN,
+    FILE_OUT,
+    FILE_CLOBBER,
+    FILE_APPEND,
+    DUPE_IN,
+    DUPE_OUT
+  };
+
 union command;
-struct arglist;
+
+/* Arguments. */
+struct arglist
+{
+  char *arg;                     /* Argument. */
+  struct arglist *next;          /* Next argument. */
+};
+
+/* Redirections. */
+struct redir
+{
+  int type;                    /* Redirection type. */
+  char *file;                    /* File name. */
+  int fd;                        /* File descriptor number. */
+  struct redir *next;            /* Next redirection. */
+};
 
 /* Regular command. */
 struct ccmd
 {
-  int type;                      /* Type. */
+  int type;                      /* Command type. */
   char *cmd;                     /* The command. */
   struct arglist *args;          /* List of arguments. */
+  struct redir *redir;           /* List of redirections. */
 };
 
 /* If. */
 struct cif
 {
-  int type;
-};
-
-struct arglist
-{
-  char *arg;                     /* Argument. */
-  struct arglist *next;          /* Next argument. */
+  int type;                 /* Command type. */
+  union command *cif_cond;       /* If command condition. */
+  union command *cif_then;       /* If command then part. */
+  union command *cif_else;       /* If command else part. */
 };
 
 /* Command types. */

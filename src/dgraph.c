@@ -25,7 +25,6 @@
 #include "dgraph.h"
 
 
-
 void
 dg_add (struct dg_node *new_node)
 {
@@ -44,6 +43,7 @@ dg_create (union command *cmd)
   /* Calloc to start with all NULL fields. */
   struct dg_node *new_node = calloc (1, sizeof *new_node);
   new_node->cmd = cmd;
+  new_node->cmd->type = FILE_OUT;
 
   return new_node;
 }

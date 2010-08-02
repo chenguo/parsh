@@ -37,7 +37,7 @@ struct dg_node
   struct dg_node *parent;        /* Parent node. */
   union command *cmd;            /* Command. */
   /* Loop control. */
-  unsigned long iter;             /* Iteration of parent loop. */
+  unsigned long iter;            /* Iteration of parent loop. */
   int nest;                      /* Nest level of command. */
   /* Frontier control. */
   struct dg_node *next;          /* Next node in frontier. */
