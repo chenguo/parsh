@@ -85,7 +85,6 @@ static void *
 parse_loop (void *ignore)
 {
   FILE *input = stdin;
-  union command *cmd;
 
   parse_init (input);
 
@@ -94,14 +93,11 @@ parse_loop (void *ignore)
     {
       /* Construct command tree. */
       print_prompt ();
-      cmd = parse_input (input);
-
-      if (cmd)
-	{
-	  /* Add return command to graph. */
-	  dg_add (cmd);
-	}
+      if (parse_input (input) != 0)
+        break;
     }
+
+  /* TODO: Exit the other loops. */
   return NULL;
 }
 

@@ -277,7 +277,7 @@ print_args (struct arglist *args)
 
 
 /* Parse a command, converting it into a command tree. */
-static union command *
+static struct dg_node *
 parse_command (struct arglist *args)
 {
   /* For now,
@@ -288,13 +288,14 @@ parse_command (struct arglist *args)
   cmdtree->ccmd.cmd = args->arg;
   cmdtree->ccmd.args = args->next;
 
-  return cmdtree;
+  /* Create a graph node. */
+  return dg_create (cmdtree);
 }
 
 
 /* Parse a line. This is the entry point into the parser for the main
    loop. */
-union command *
+int
 parse_input (FILE *input)
 {
   /* Read a line. */
@@ -304,10 +305,17 @@ parse_input (FILE *input)
   struct arglist *args = parse_token (input);
   if (!args)
     {
-      return NULL;
+      return 0;
     }
   print_args(args);
 
   /* Recursively process tokens and build command tree. */
-  return parse_command (args);
+  struct dg_node *new_node = parse_command (args);
+  if (new_node)
+    {
+      dg_add (new_node);
+      return 0;
+    }
+
+  return 1;
 }

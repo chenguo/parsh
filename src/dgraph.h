@@ -44,7 +44,8 @@ struct dg_node
   struct dg_node *prev;          /* Previous node in frontier. */
 };
 
-void dg_add (union command *);
+struct dg_node * dg_create (union command *);
+void dg_add (struct dg_node *);
 void dg_remove (struct dg_node *);
 
 #endif

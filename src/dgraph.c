@@ -25,15 +25,11 @@
 #include "dgraph.h"
 
 
-static struct dg_node * dg_create (union command *);
 
 void
-dg_add (union command *cmd)
+dg_add (struct dg_node *new_node)
 {
   DG_LOCK;
-
-  /* Create node for command. */
-  struct dg_node *new_node = dg_create (cmd);
 
   /* For now, just straight add it. */
   /* Add to frontier. */
@@ -42,7 +38,7 @@ dg_add (union command *cmd)
   DG_UNLOCK;
 }
 
-static struct dg_node *
+struct dg_node *
 dg_create (union command *cmd)
 {
   /* Calloc to start with all NULL fields. */
