@@ -93,11 +93,12 @@ parse_loop (void *ignore)
     {
       /* Construct command tree. */
       print_prompt ();
-      if (parse_input (input) != 0)
+      if (!parse_input (input))
         break;
     }
 
   /* TODO: Exit the other loops. */
+
   return NULL;
 }
 

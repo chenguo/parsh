@@ -125,8 +125,9 @@ parse_token (FILE *input)
       while (1)
         {
           char c = *linbuf.ptr;
-          DBG("Buf left %d, %c:%d, e:s:d:o %d%d%d%d\n", linbuf.lim - linbuf.ptr, c, c,
-              esc, s_quote, d_quote, op);
+          //DBG("Buf left %ld, %c:%d, e:s:d:o %d%d%d%d\n",
+          //    linbuf.lim - linbuf.ptr, c, c, esc, s_quote,
+          //    d_quote, op);
 
           /* TODO: verify that this only happens at last byte
              of buffer. I.e., could it happen that there's
@@ -276,17 +277,102 @@ print_args (struct arglist *args)
 }
 
 
+/* Determine type of redirection. */
+static int
+redir_type (char *redir)
+{
+  if (strcmp (redir, "<") == 0)
+    return FILE_IN;
+  else if (strcmp (redir, ">") == 0)
+    return FILE_OUT;
+  else if (strcmp (redir, ">|") == 0)
+    return FILE_CLOBBER;
+  else if (strcmp (redir, ">>") == 0)
+    return FILE_APPEND;
+  /* TODO: DUPE_IN, DUPE_OUT, support syntax like "2<" */
+  else
+    return NO_REDIR;
+}
+
 /* Parse a command, converting it into a command tree. */
 static struct dg_node *
 parse_command (struct arglist *args)
 {
-  /* For now,
-     1) First arg is command.
-     2) Remaining args are command arguments. */
-  union command *cmdtree = (union command *) malloc (sizeof (struct ccmd));
-  cmdtree->type = COMMAND;
-  cmdtree->ccmd.cmd = args->arg;
-  cmdtree->ccmd.args = args->next;
+  union command *cmdtree;
+
+  if (strcmp (args->arg, "if") == 0)
+    {
+
+    }
+  else if (strcmp (args->arg, "for") == 0)
+    {
+
+    }
+  else if (strcmp (args->arg, "while") == 0)
+    {
+
+    }
+  else if (strcmp (args->arg, "until") == 0)
+    {
+
+    }
+  else if (strcmp (args->arg, "case") == 0)
+    {
+
+    }
+  else
+    {
+      /* Regular command. */
+      cmdtree = (union command *) malloc (sizeof (struct ccmd));
+      cmdtree->type = COMMAND;
+      /* First argument is the command itself. */
+      cmdtree->ccmd.cmd = args->arg;
+      /* Step through remaining tokens, separating arguments from
+         redirections. */
+      struct arglist **argp = &cmdtree->ccmd.args;
+      struct redir **redirp = &cmdtree->ccmd.redirs;
+      /* Loop over command arguments. */
+      struct arglist *free_arg = args;
+      args = args->next;
+      free (free_arg);
+      while (args)
+        {
+          int arg_type = redir_type (args->arg);
+          /* If not an operator, append to arguments list. */
+          if (arg_type == NO_REDIR)
+            {
+              /* Append current argument to command's arguments list. */
+              *argp = args;
+              argp = &(*argp)->next;
+              args = args->next;
+            }
+          else
+            {
+              /* Create new redirection. */
+              *redirp = malloc (sizeof **redirp);
+              (*redirp)->type = arg_type;
+              (*redirp)->next = NULL;
+
+              /* Free redirection operator resources. */
+              free_arg = args;
+              args = args->next;
+              free (free_arg->arg);
+              free (free_arg);
+
+              /* Get the redirection target. */
+              (*redirp)->file = args->arg;
+              (*redirp)->fd = 0;
+              DBG("Redirection added: %s\n", args->arg);
+
+              /* Free the arglist struct. */
+              free_arg = args;
+              args = args->next;
+              free (free_arg);
+              redirp = &(*redirp)->next;
+
+            }
+        }
+    }
 
   /* Create a graph node. */
   return dg_create (cmdtree);
@@ -294,8 +380,14 @@ parse_command (struct arglist *args)
 
 
 /* Parse a line. This is the entry point into the parser for the main
-   loop. */
-int
+   loop.
+
+   This function first reads in a line. Then it breaks the line down
+   into individual tokens, and finally creates a command tree out of 
+   those tokens, inserting each tree into the graph.
+
+   This function will return true until EOF is reached. */
+bool
 parse_input (FILE *input)
 {
   /* Read a line. */
@@ -304,18 +396,15 @@ parse_input (FILE *input)
   /* Break down the line into tokens. */
   struct arglist *args = parse_token (input);
   if (!args)
-    {
-      return 0;
-    }
-  print_args(args);
+    return true;
+  //print_args(args);
 
   /* Recursively process tokens and build command tree. */
   struct dg_node *new_node = parse_command (args);
   if (new_node)
     {
       dg_add (new_node);
-      return 0;
+      return true;
     }
-
-  return 1;
+  return false;
 }

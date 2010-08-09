@@ -33,6 +33,7 @@ enum
 
 enum
   {
+    NO_REDIR,
     FILE_IN,
     FILE_OUT,
     FILE_CLOBBER,
@@ -53,7 +54,7 @@ struct arglist
 /* Redirections. */
 struct redir
 {
-  int type;                    /* Redirection type. */
+  int type;                      /* Redirection type. */
   char *file;                    /* File name. */
   int fd;                        /* File descriptor number. */
   struct redir *next;            /* Next redirection. */
@@ -65,13 +66,13 @@ struct ccmd
   int type;                      /* Command type. */
   char *cmd;                     /* The command. */
   struct arglist *args;          /* List of arguments. */
-  struct redir *redir;           /* List of redirections. */
+  struct redir *redirs;          /* List of redirections. */
 };
 
 /* If. */
 struct cif
 {
-  int type;                 /* Command type. */
+  int type;                      /* Command type. */
   union command *cif_cond;       /* If command condition. */
   union command *cif_then;       /* If command then part. */
   union command *cif_else;       /* If command else part. */

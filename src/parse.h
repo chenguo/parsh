@@ -19,9 +19,10 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include <stdbool.h>
 #include <stdio.h>
 
 void parse_init (FILE *input);
-int parse_input (FILE *input);
+bool parse_input (FILE *input);
 
 #endif
