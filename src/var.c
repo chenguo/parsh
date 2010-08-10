@@ -1,4 +1,4 @@
-/* Parsh, the Parallel Shell.
+/* Shell variables.
    Copyright (C) 2010 Chen Guo
 
    This program is free software: you can redistribute it and/or modify
@@ -17,14 +17,31 @@
    Written by Chen Guo, chenguo4@ucla.edu.
    Under advisement of Paul Eggert.  */
 
-#include <stdio.h>
+#include <pthreads.h>
 
-#define DEBUG
+#include "var.h"
 
-FILE *dbg;
+static pthread_mutex_t var_lock;
 
-#ifdef DEBUG
-#define DBG(msg...) fprintf (dbg, msg);
-#else
-#define DBG(msg...)
-#endif
+#define VAR_LOCK {pthread_mutex_lock (&var_lock;}
+#define VAR_UNLOCK {pthread_mutex_unlock (&var_lock;}
+
+/* Hash table based off of Dash's implementation. */
+#define VTABSIZE 39
+struct var *vartab[VTABSIZE];
+
+const char default_path[] =
+  "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+
+void
+var_init (void)
+{
+  pthread_mutex_init (&var_lock, NULL);
+  VAR_LOCK;
+
+  /* Initialize the hash table. */
+  /* TODO: write hash function. PWD??? */
+
+  VAR_UNLOCK;
+}
+

@@ -14,8 +14,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-   Written by Chen Guo, chenguo4@ucla.edu.  */
-
+   Written by Chen Guo, chenguo4@ucla.edu.
+   Under advisement of Paul Eggert.  */
 
 #include <pthread.h>
 #include <stdio.h>
