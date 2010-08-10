@@ -80,7 +80,21 @@ parse_readline (FILE *input)
 static void
 putc_tok (char c)
 {
-  /* TODO: realloc if buffer is full. */
+  /* Realloc if buffer is full. */
+  if (tokbuf.ptr == tokbuf.lim)
+    {
+      /* Increase buffer size by a factor of two. */
+      size_t siz = tokbuf.siz * 2;
+      tokbuf.buf = realloc (tokbuf.buf, siz);
+
+      if (NULL == tokbuf.buf)
+        abort ();
+
+      tokbuf.ptr = tokbuf.buf + tokbuf.siz;
+      tokbuf.lim = tokbuf.buf + siz;
+      tokbuf.siz = siz;
+    }
+
   *tokbuf.ptr++ = c;
 }
 
