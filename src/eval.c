@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "command.h"
@@ -83,26 +84,47 @@ forkexec (union command *command, char **argv)
   pid_t pid = fork ();
   if (pid == 0)
     {
-      char pwd[] = "/home/chen/Coding/Parsh/test/";
-
       /* Handle redirections. */
       struct redir *redirs;
       for (redirs = cmd->redirs; redirs; redirs = redirs->next)
         {
-          /* Allocate space for file name. */
-          size_t pwd_len = strlen (pwd);
-          char *fname = malloc (strlen (redirs->file) + pwd_len + 1);
-          strcpy (fname, pwd);
-          strcpy (fname + pwd_len, redirs->file);
+          int fd_dup;
+          int fd;
+          int flags;
+          /* TODO: correctly set mode. */
+          mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 
-          /* Open a file. First get name.*/
-          /* TODO: correctly set flags.
-             TODO: check error codes. */
-          int fd = open (fname, O_WRONLY | O_CREAT);
-          DBG("File %s opened on descriptor %d.\n", fname, fd);
+          /* Open files. */
+          /* TODO: Check error codes. */
+          /* TODO: file descriptors, such as 2> */
+          DBG("FORKEXEC: type %d\n", redirs->type);
+          switch (redirs->type)
+            {
+            case FILE_IN:
+              flags = O_RDONLY;
+              fd_dup = STDIN_FILENO;
+              break;
 
-          /* TODO: correctly set dup fds. */
-          dup2 (fd, STDOUT_FILENO);
+            case FILE_OUT:
+              /* TODO: Respect noclobber. */
+              flags = O_WRONLY | O_CREAT | O_TRUNC;
+              fd_dup = STDOUT_FILENO;
+              break;
+
+            case FILE_CLOBBER:
+              flags = O_WRONLY | O_CREAT | O_TRUNC;
+              fd_dup = STDOUT_FILENO;
+              break;
+
+            case FILE_APPEND:
+              flags = O_WRONLY | O_CREAT | O_APPEND;
+              fd_dup = STDOUT_FILENO;
+              break;
+            }
+
+          fd = open (redirs->file, flags, mode);
+          DBG("File %s opened on descriptor %d.\n", redirs->file, fd);
+          dup2 (fd, fd_dup);
         }
 
       char **env = {NULL};

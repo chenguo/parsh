@@ -128,11 +128,9 @@ parse_token (FILE *input)
       while (isspace (*linbuf.ptr))
         {
           /* TODO: handle escaped newlines. */
+          /* Thre entire line has been processed. */
           if (*linbuf.ptr == '\n')
-            {
-              /* Thre entire line has been processed. */
-              return args;
-            }
+            return args;
           linbuf.ptr++;
         }
     
@@ -159,6 +157,7 @@ parse_token (FILE *input)
               switch (c)
                 {
                   /* Operators. */
+                  /* TODO: file descriptors, such as 2> */
                 case '&':
                 case '|':
                 case ';':
@@ -231,17 +230,15 @@ parse_token (FILE *input)
               /* Quoted. */
               switch (c)
                 {
-                  /* TODO: Handle escapes. */
                 case '\'':
-                  if (s_quote)
+                  if (s_quote && !esc)
                     s_quote = false;
                   else
-                    rmescape (c);
-                    //putc_tok (c);
+                    putc_tok (c);
                   break;
 
                 case '"':
-                  if (d_quote)
+                  if (d_quote && !esc)
                     d_quote = false;
                   else
                     putc_tok (c);
@@ -250,11 +247,14 @@ parse_token (FILE *input)
                 case '\n':
                   printf ("> ");
                   parse_readline (input);
-                  putc_tok (c);
+                  if (!esc)
+                    putc_tok (c);
+                  esc = (esc)? !esc : esc;
                   continue;
 
                 default:
                   putc_tok (c);
+                  esc = (esc)? !esc : esc;
                 }
             }
           linbuf.ptr++;
