@@ -21,16 +21,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 #include "command.h"
 #include "parsh.h"
+#include "var.h"
 
 #include "eval.h"
 
 
 static void forkexec (union command *, char **);
+static char *findpath (const char *);
 
 /* TODO: specify return value. I have a feeling this function needs one. */
 /* Evalute a command. */
@@ -52,13 +55,13 @@ eval_cmd (struct dg_node *frontier_node)
 
   /* Print each file redirection. */
   struct redir *redirp = frontier_node->cmd->ccmd.redirs;
-  DBG ("EVAL_CMD: output files: ");
+  DBG("EVAL_CMD: output files: ");
   while (redirp)
     {
       DBG ("%s ", redirp->file);
       redirp = redirp->next;
     }
-  DBG ("\n");
+  DBG("\n");
 
   /* Copy arguments into ARGV. */
   argv = malloc (sizeof *argv * argc + 1);
@@ -128,10 +131,55 @@ forkexec (union command *command, char **argv)
         }
 
       char **env = {NULL};
-      execve (cmd->cmd, argv, env);
+      char *cmdpath = findpath (cmd->cmd);
+      DBG("CMD: %s\n", cmdpath);
+      if (cmdpath)
+        execve (cmdpath, argv, env);
+      else
+        printf ("%s: command not found.\n", cmd->cmd);
     }
   else if (pid < 0) 
+    abort ();
+}
+
+/* Resolve the path of the executable.
+   TODO: Don't just read state, as $PATH will change while
+   reading state only gets us the most recent $PATH. */
+static char cmdbuf[PATH_MAX];
+static char *
+findpath (const char *exe)
+{
+  /* Read path. */
+  struct var_state *pathstate = read_state ("PATH");
+  char *path_start = pathstate->val;
+  size_t exelen = strlen (exe);
+
+  /* For each path, STAT the executable. */
+  while (1)
     {
-      abort ();
+      /* Get a executable path. */
+      size_t pathlen = 0;
+      char *path_end = strchr (path_start, ':');
+      if (path_end)
+          pathlen = path_end - path_start;
+      else
+        pathlen = strlen (path_start);
+      strncpy (cmdbuf, path_start, pathlen);
+      if (cmdbuf[pathlen - 1] != '/')
+        cmdbuf[pathlen++] = '/';
+      strncpy (cmdbuf + pathlen, exe, exelen);
+      cmdbuf[pathlen + exelen] = '\0';
+
+      /* Stat the file at the path. */
+      struct stat statbuf;
+      if (stat (cmdbuf, &statbuf) == 0)
+        return cmdbuf;
+
+      /* Move onto next prefix until prefixes are exhausted. */
+      if (!path_end)
+        break;
+      else
+        path_start = path_end + 1;
     }
+  return NULL;
 }

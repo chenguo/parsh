@@ -60,8 +60,9 @@ struct state_list
 
 void var_init (void);
 struct var_state * create_state (const char *);
-void write_state (const struct var_state *, const char *);
-void queue_state (const struct dg_node *, const struct var_state *);
+void write_state (struct var_state *, const char *);
+void queue_state (struct dg_node *, struct var_state *);
 struct var_state * read_state (const char *);
+char *strncpy_nul (const char *, size_t);
 
 #endif

@@ -17,39 +17,54 @@
    Written by Chen Guo, chenguo4@ucla.edu.
    Under advisement of Paul Eggert.  */
 
-#include <pthreads.h>
+#include <pthread.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "parsh.h"
 #include "var.h"
 
 static pthread_mutex_t var_lock;
+static pthread_mutexattr_t attr;
 
-#define VAR_LOCK {pthread_mutex_lock (&var_lock;}
-#define VAR_UNLOCK {pthread_mutex_unlock (&var_lock;}
+#define VAR_LOCK {pthread_mutex_lock (&var_lock);}
+#define VAR_UNLOCK {pthread_mutex_unlock (&var_lock);}
 
 /* Hash table based off of Dash's implementation. */
 #define VTABSIZE 39
 struct var *vartab[VTABSIZE];
 
 const char default_path[] =
-  "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+  "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+
+static struct var ** hash_var (const char *);
+static struct var ** find_var (struct var **, const char *);
+
 
 void
 var_init (void)
 {
-  pthread_mutex_init (&var_lock, NULL);
+  /* Create recursive mutex. */
+  pthread_mutexattr_init(&attr);
+  pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutex_init (&var_lock, &attr);
   VAR_LOCK;
 
-  /* TODO: Initialize the hash table. */
-  
+  /* TODO: Completely initialize the hash table, not with just $PATH. */
+  struct var_state *new_state = create_state (default_path);
+  write_state (new_state, default_path);
+  DBG("PATH: %s\n", new_state->val);
 
   VAR_UNLOCK;
 }
-
+    
 /* Create a new state. */
 struct var_state *
 create_state (const char *assnstr)
 {
-  /* Extract name and value. */
+  /* Copy name. */
+  char *eq = strchr (assnstr, '=');
+  char *name = strncpy_nul (assnstr, eq - assnstr);
 
   /* Create a mew state. */
   struct var_state *new_state = malloc (sizeof *new_state);
@@ -65,13 +80,12 @@ create_state (const char *assnstr)
   /* Find the variable that's being written to. If variable doesn't
      exist, allocate it. */
   struct var **vpp = hash_var (name);
-  struct var *vp = *findvar (vpp, name);
+  struct var *vp = *find_var (vpp, name);
   if (!vp)
     {
       /* Create new bucket entry; put at head. */
       vp = (struct var *) malloc (sizeof (struct var));
       vp->next = *vpp;
-      vp->flags = 0;
       vp->name = name;
       vp->head = NULL;
       vp->tail = NULL;
@@ -102,19 +116,17 @@ create_state (const char *assnstr)
 
 /* Write a state. */
 void
-write_state (const struct var_state *state, const char *val)
+write_state (struct var_state *state, const char *assnstr)
 {
-  VAR_LOCK;
-  /* Write value. */
-  size_t valsize = strlen (val);
-  state->val = malloc (valsize + 1);
-  memcpy (state->val, val, valsize);
-  state->val[valsize] = '\0';
+  /* Make a copy of value. */
+  char *val = strchr (assnstr, '=') + 1;
+  state->val = strncpy_nul (val, strlen (val));
 
+  VAR_LOCK;
   /* Unblock accessors. */
   struct var_acc *iter = state->acc_list;
   struct var_acc *save;
-  while (iter);
+  while (iter)
     {
       /* TODO: decrease dependency count by 1. There will
          be a dgraph function for this. */
@@ -128,14 +140,14 @@ write_state (const struct var_state *state, const char *val)
 
 /* Attach an accessor to a state. */
 void
-queue_state (const struct dg_node *node, const struct var_state *state)
+queue_state (struct dg_node *node, struct var_state *state)
 {
   VAR_LOCK;
   if (!state->val)
     {
       struct var_acc *acc = (struct var_acc *) malloc (sizeof *acc);
       acc->next = state->acc_list;
-      acc->node = node;
+      acc->acc = node;
       state->acc_list = acc;
     }
   state->accessors++;
@@ -146,8 +158,10 @@ queue_state (const struct dg_node *node, const struct var_state *state)
 struct var_state *
 read_state (const char *name)
 {
+  DBG("READ STATE\n");
   VAR_LOCK;
-  struct var *var = *findvar (name);
+  struct var **vtab_entry = hash_var (name);
+  struct var *var = *find_var (vtab_entry, name);
   struct var_state *state = var->tail;
 
   VAR_UNLOCK;
@@ -156,7 +170,7 @@ read_state (const char *name)
 
 /* Hash function based off of Dash's. */
 static struct var **
-hash_state (const char *p)
+hash_var (const char *p)
 {
   unsigned int hashval;
 
@@ -168,11 +182,21 @@ hash_state (const char *p)
 
 /* Find a variable in a hash bucket. */
 static struct var **
-findvar (struct var **vpp, const char *name)
+find_var (struct var **vpp, const char *name)
 {
   DBG(("FIND VAR\n"));
   for (; *vpp; vpp = &(*vpp)->next)
-    if (varcmp ((*vpp)->name, name) == 0)
+    if (strcmp ((*vpp)->name, name) == 0)
       break;
   return vpp;
+}
+
+/* Make a NUL delimited copy. Passed in STRLEN does not include NUL byte. */
+char *
+strncpy_nul (const char *s2, size_t strlen)
+{
+  char *s1 = malloc (strlen + 1);
+  strncpy (s1, s2, strlen);
+  s1[strlen] = '\0';
+  return s1;
 }

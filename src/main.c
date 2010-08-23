@@ -26,6 +26,7 @@
 #include "eval.h"
 #include "frontier.h"
 #include "parse.h"
+#include "var.h"
 
 #include "parsh.h"
 
@@ -42,6 +43,7 @@ static void parsh_init ()
 #ifdef DEBUG
   dbg = fopen ("debug", "w");
 #endif
+  var_init ();
 }
 
 int
