@@ -158,7 +158,7 @@ findpath (const char *exe)
   while (1)
     {
       /* Get a executable path. */
-      size_t pathlen = 0;
+      size_t pathlen;
       char *path_end = strchr (path_start, ':');
       if (path_end)
           pathlen = path_end - path_start;
