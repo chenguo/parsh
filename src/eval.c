@@ -150,7 +150,7 @@ static char *
 findpath (const char *exe)
 {
   /* Read path. */
-  struct var_state *pathstate = read_state ("PATH");
+  struct var_state *pathstate = var_read_state ("PATH");
   char *path_start = pathstate->val;
   size_t exelen = strlen (exe);
 

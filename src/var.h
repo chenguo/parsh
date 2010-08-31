@@ -51,7 +51,7 @@ struct var
 };
 
 /* Master chronological states list. */
-struct state_list
+struct var_state_list
 {
   struct var_state *state;       /* Variable state. */
   struct state_list *next;       /* Next oldest state. */
@@ -59,10 +59,10 @@ struct state_list
 
 
 void var_init (void);
-struct var_state * create_state (const char *);
-void write_state (struct var_state *, const char *);
-void queue_state (struct dg_node *, struct var_state *);
-struct var_state * read_state (const char *);
+struct var_state * var_create_state (const char *);
+void var_write_state (struct var_state *, const char *);
+void var_queue_state (struct dg_node *, struct var_state *);
+struct var_state * var_read_state (const char *);
 char *strncpy_nul (const char *, size_t);
 
 #endif

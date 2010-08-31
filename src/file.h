@@ -33,19 +33,23 @@ enum
   };
 
 /* File being accessed by one or more commands. */
-struct f_file
+struct file
 {
   /* TDOO: inode */
   char *path;                    /* Absolute path to the file. */
-  struct f_access *accessors;    /* Commands accessing file. */
-  struct f_file *next;           /* Next file. */
+  struct file_acc *accessors;    /* Commands accessing file. */
+  struct file *next;             /* Next file with same hash.. */
 };
 
 /* File accessor. */
-struct f_access
+struct file_acc
 {
   int access;                    /* Access type. */
   struct dg_node *node;          /* Graph node of command. */
 };
+
+
+void file_init (void);
+void file_add_accessor (const struct dg_node *);
 
 #endif

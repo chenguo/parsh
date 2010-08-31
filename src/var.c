@@ -37,8 +37,8 @@ struct var *vartab[VTABSIZE];
 const char default_path[] =
   "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
 
-static struct var ** hash_var (const char *);
-static struct var ** find_var (struct var **, const char *);
+static struct var ** var_hash (const char *);
+static struct var ** var_find (struct var **, const char *);
 
 
 void
@@ -51,8 +51,8 @@ var_init (void)
   VAR_LOCK;
 
   /* TODO: Completely initialize the hash table, not with just $PATH. */
-  struct var_state *new_state = create_state (default_path);
-  write_state (new_state, default_path);
+  struct var_state *new_state = var_create_state (default_path);
+  var_write_state (new_state, default_path);
   DBG("PATH: %s\n", new_state->val);
 
   VAR_UNLOCK;
@@ -60,7 +60,7 @@ var_init (void)
     
 /* Create a new state. */
 struct var_state *
-create_state (const char *assnstr)
+var_create_state (const char *assnstr)
 {
   /* Copy name. */
   char *eq = strchr (assnstr, '=');
@@ -79,8 +79,8 @@ create_state (const char *assnstr)
 
   /* Find the variable that's being written to. If variable doesn't
      exist, allocate it. */
-  struct var **vpp = hash_var (name);
-  struct var *vp = *find_var (vpp, name);
+  struct var **vpp = var_hash (name);
+  struct var *vp = *var_find (vpp, name);
   if (!vp)
     {
       /* Create new bucket entry; put at head. */
@@ -116,7 +116,7 @@ create_state (const char *assnstr)
 
 /* Write a state. */
 void
-write_state (struct var_state *state, const char *assnstr)
+var_write_state (struct var_state *state, const char *assnstr)
 {
   /* Make a copy of value. */
   char *val = strchr (assnstr, '=') + 1;
@@ -140,7 +140,7 @@ write_state (struct var_state *state, const char *assnstr)
 
 /* Attach an accessor to a state. */
 void
-queue_state (struct dg_node *node, struct var_state *state)
+var_queue_state (struct dg_node *node, struct var_state *state)
 {
   VAR_LOCK;
   if (!state->val)
@@ -156,12 +156,12 @@ queue_state (struct dg_node *node, struct var_state *state)
 
 /* Read variable state. Return NULL is variable does not exist. */
 struct var_state *
-read_state (const char *name)
+var_read_state (const char *name)
 {
   DBG("READ STATE\n");
   VAR_LOCK;
-  struct var **vtab_entry = hash_var (name);
-  struct var *var = *find_var (vtab_entry, name);
+  struct var **vtab_entry = var_hash (name);
+  struct var *var = *var_find (vtab_entry, name);
   struct var_state *state = var->tail;
 
   VAR_UNLOCK;
@@ -170,7 +170,7 @@ read_state (const char *name)
 
 /* Hash function based off of Dash's. */
 static struct var **
-hash_var (const char *p)
+var_hash (const char *p)
 {
   unsigned int hashval;
 
@@ -182,7 +182,7 @@ hash_var (const char *p)
 
 /* Find a variable in a hash bucket. */
 static struct var **
-find_var (struct var **vpp, const char *name)
+var_find (struct var **vpp, const char *name)
 {
   DBG(("FIND VAR\n"));
   for (; *vpp; vpp = &(*vpp)->next)
