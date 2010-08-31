@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "command.h"
 #include "file.h"
 #include "parsh.h"
 
@@ -46,27 +47,67 @@ file_init (void)
   pthread_mutex_init (&file_lock, &attr);
 }
 
+/* Create hash entry for a file. */
+static struct file **
+file_add (char *file)
+{
+  // TODO: Absolute path.
+  /* Allocate new file struct. */
+  struct file *new_file = malloc (sizeof *new_file);
+  new_file->access = NO_ACCESS;
+  new_file->path = file;
+  /* Place struct in hash table. */
+  struct file **fpp = file_hash (file);
+  new_file->next = *fpp;
+  *fpp = new_file;
+  return fpp;
+}
+
 /* Add an accessor to a file/files in the hash. */
 void
-file_add_accessor (const struct dg_node *graph_node)
+file_add_accessor (struct redir *redirs, struct dg_node *node)
 {
   /* Parse file accesses. */
 
   /* Add graph_node as accessor. If no file in hash,
      create an entry. */
-}
+  while (redirs)
+    {
+      /* Create new accessor struct. */
+      struct file_acc *new_acc = malloc (sizeof *new_acc);
+      switch (redirs->type)
+        {
+        case FILE_IN:
+          new_acc->access = READ_ACCESS;
+          break;
+        case FILE_OUT:
+        case FILE_CLOBBER:
+        case FILE_APPEND:
+          new_acc->access = WRITE_ACCESS;
+        }
+      new_acc->node = node;
+      new_acc->next = NULL;
 
-/* Create hash entry for a file. */
-static void
-file_add (char *file)
-{
-  // TODO: Absolute path.
-  struct file *new_file = malloc (sizeof *new_file);
-  new_file->path = file;
-  new_file->accessors = NULL;
-  struct file **fpp = file_hash (file);
-  new_file->next = *fpp;
-  *fpp = new_file;
+      /* File the file being accessed. */
+      struct file *file = *file_find (file_hash (redirs->file), redirs->file);
+      if (file)
+        {
+          /* File already hashed. Set pointers. */
+          if (file->acc_tail)
+            file->acc_tail->next = new_acc;
+          else
+            file->accessors = new_acc;
+
+          file->acc_tail = new_acc;
+        }
+      else
+        {
+          /* File not yet hashed. Hash it. */
+          file = *file_add (redirs->file);
+          file->accessors = new_acc;
+          file->acc_tail = new_acc;
+        }
+    }
 }
 
 /* Hash function based off of Dash's. */

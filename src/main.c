@@ -24,6 +24,7 @@
 #include "command.h"
 #include "dgraph.h"
 #include "eval.h"
+#include "file.h"
 #include "frontier.h"
 #include "parse.h"
 #include "var.h"
@@ -43,6 +44,7 @@ static void parsh_init ()
 #ifdef DEBUG
   dbg = fopen ("debug", "w");
 #endif
+  file_init ();
   var_init ();
 }
 

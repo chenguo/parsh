@@ -22,11 +22,13 @@
 
 #include <stdbool.h>
 
+#include "command.h"
 #include "dgraph.h"
 
 /* Access type. */
 enum
   {
+    NO_ACCESS,
     READ_ACCESS,
     WRITE_ACCESS,
     RW_ACCESS
@@ -36,8 +38,10 @@ enum
 struct file
 {
   /* TDOO: inode */
+  int access;                    /* Type of current access. */
   char *path;                    /* Absolute path to the file. */
   struct file_acc *accessors;    /* Commands accessing file. */
+  struct file_acc *acc_tail;     /* Last accessor in list. */
   struct file *next;             /* Next file with same hash.. */
 };
 
@@ -46,10 +50,11 @@ struct file_acc
 {
   int access;                    /* Access type. */
   struct dg_node *node;          /* Graph node of command. */
+  struct file_acc *next;         /* Next accessor. */
 };
 
 
 void file_init (void);
-void file_add_accessor (const struct dg_node *);
+void file_add_accessor (struct redir *, struct dg_node *);
 
 #endif
