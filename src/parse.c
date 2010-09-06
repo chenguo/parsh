@@ -128,7 +128,7 @@ parse_token (FILE *input)
       while (isspace (*linbuf.ptr))
         {
           /* TODO: handle escaped newlines. */
-          /* Thre entire line has been processed. */
+          /* The entire line has been processed. */
           if (*linbuf.ptr == '\n')
             return args;
           linbuf.ptr++;
@@ -186,6 +186,7 @@ parse_token (FILE *input)
                               /* Unset operator flag. */
                               op = false;
                               putc_tok (c);
+                              putc_tok (opc);
                               linbuf.ptr++;
                             }
                           else
@@ -269,7 +270,8 @@ parse_token (FILE *input)
           (*argsp)->arg = malloc (toksiz * sizeof (char));
           /* Copy the token from the token buffer and reset token buffer. */
           memcpy ((*argsp)->arg, tokbuf.buf, toksiz);
-          DBG("Token: %s\n", (*argsp)->arg);
+          DBG("PARSE TOKEN: token: %s, size: %d\n", (*argsp)->arg, toksiz);
+          printf ("PARSE TOKEN: token: %s, size: %d\n", (*argsp)->arg, toksiz);
           tokbuf.ptr = tokbuf.buf;
           /* Update variables. */
           toksiz = 0;
