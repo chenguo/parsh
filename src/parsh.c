@@ -1,4 +1,4 @@
-/* Common definitions and functions.
+/* Common fuctions.
    Copyright (C) 2010 Chen Guo
 
    This program is free software: you can redistribute it and/or modify
@@ -17,16 +17,15 @@
    Written by Chen Guo, chenguo4@ucla.edu.
    Under advisement of Paul Eggert.  */
 
-#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#define DEBUG
-
-FILE *dbg;
-
-#ifdef DEBUG
-#define DBG(msg...) fprintf (dbg, msg);
-#else
-#define DBG(msg...)
-#endif
-
-char *strncpy_nul (const char *, size_t);
+/* Make a NUL delimited copy. Passed in STRLEN does not include NUL byte. */
+char *
+strncpy_nul (const char *s2, size_t strlen)
+{
+  char *s1 = malloc (strlen + 1);
+  strncpy (s1, s2, strlen);
+  s1[strlen] = '\0';
+  return s1;
+}

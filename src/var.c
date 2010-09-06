@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "parsh.h"
+
 #include "var.h"
 
 static pthread_mutex_t var_lock;
@@ -191,12 +192,3 @@ var_find (struct var **vpp, const char *name)
   return vpp;
 }
 
-/* Make a NUL delimited copy. Passed in STRLEN does not include NUL byte. */
-char *
-strncpy_nul (const char *s2, size_t strlen)
-{
-  char *s1 = malloc (strlen + 1);
-  strncpy (s1, s2, strlen);
-  s1[strlen] = '\0';
-  return s1;
-}

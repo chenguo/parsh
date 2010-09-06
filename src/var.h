@@ -63,6 +63,5 @@ struct var_state * var_create_state (const char *);
 void var_write_state (struct var_state *, const char *);
 void var_queue_state (struct dg_node *, struct var_state *);
 struct var_state * var_read_state (const char *);
-char *strncpy_nul (const char *, size_t);
 
 #endif

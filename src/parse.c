@@ -29,7 +29,6 @@
 
 #include "parse.h"
 
-
 /* HUGE TODO: make it so that there's no arbitrary input line limit. */
 #define DEFAULT_INBUF_SIZE 9
 #define DEFAULT_TOKEN_SIZE 256
@@ -186,7 +185,6 @@ parse_token (FILE *input)
                               /* Unset operator flag. */
                               op = false;
                               putc_tok (c);
-                              putc_tok (opc);
                               linbuf.ptr++;
                             }
                           else
@@ -265,15 +263,12 @@ parse_token (FILE *input)
       toksiz = tokbuf.ptr - tokbuf.buf;
       if (toksiz)
         {
-          /* Allocate a new arglist node. */
+          /* Allocate a new arglist node, copy token. */
           *argsp = malloc (sizeof **argsp);
-          (*argsp)->arg = malloc (toksiz * sizeof (char));
-          /* Copy the token from the token buffer and reset token buffer. */
-          memcpy ((*argsp)->arg, tokbuf.buf, toksiz);
+          (*argsp)->arg = strncpy_nul (tokbuf.buf, toksiz);
           DBG("PARSE TOKEN: token: %s, size: %d\n", (*argsp)->arg, toksiz);
-          printf ("PARSE TOKEN: token: %s, size: %d\n", (*argsp)->arg, toksiz);
-          tokbuf.ptr = tokbuf.buf;
           /* Update variables. */
+          tokbuf.ptr = tokbuf.buf;
           toksiz = 0;
           (*argsp)->next = NULL;
           argsp = &(*argsp)->next;
