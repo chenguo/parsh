@@ -22,7 +22,6 @@
 #include <unistd.h>
 
 #include "command.h"
-#include "dgraph.h"
 #include "eval.h"
 #include "file.h"
 #include "frontier.h"
@@ -71,7 +70,7 @@ main (void)
 static void *
 eval_loop (void *ignore)
 {
-  struct dg_node *command;
+  struct command *command;
 
   DBG("Eval loop initiated.\n");
   for (;;)

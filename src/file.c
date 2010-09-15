@@ -22,8 +22,11 @@
 #include <string.h>
 
 #include "command.h"
-#include "file.h"
+#include "frontier.h"
 #include "parsh.h"
+
+#include "file.h"
+
 
 static pthread_mutex_t file_lock;
 static pthread_mutexattr_t attr;
@@ -64,7 +67,7 @@ file_add (char *file)
 }
 
 /* Add an accessor to a file/files in the hash. */
-void
+static void
 file_add_accessor (struct redir *redirs, struct dg_node *node)
 {
   /* Parse file accesses. */
@@ -108,6 +111,23 @@ file_add_accessor (struct redir *redirs, struct dg_node *node)
           file->acc_tail = new_acc;
         }
     }
+}
+
+/* Add a command's file accesses to the hash table. */
+void
+file_add_command (union cmd *new_cmd)
+{
+  struct command *new_command = calloc (1, sizeof *new_command);
+  new_command->cmd = new_cmd;
+
+  FILE_LOCK;
+
+
+
+  /* Add to frontier if no dependencies. */
+  if (new_command->dependencies == 0)
+    frontier_add (new_command);
+  FILE_UNLOCK;
 }
 
 /* Hash function based off of Dash's. */

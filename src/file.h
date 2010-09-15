@@ -23,7 +23,6 @@
 #include <stdbool.h>
 
 #include "command.h"
-#include "dgraph.h"
 
 /* Access type. */
 enum
@@ -55,6 +54,7 @@ struct file_acc
 
 
 void file_init (void);
-void file_add_accessor (struct redir *, struct dg_node *);
+//void file_add_accessor (struct redir *, struct dg_node *);
+void file_add_command (union cmd *);
 
 #endif

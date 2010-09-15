@@ -32,20 +32,20 @@
 #include "eval.h"
 
 
-static void forkexec (union command *, char **);
+static void forkexec (union cmd *, char **);
 static char *findpath (const char *);
 
 /* TODO: specify return value. I have a feeling this function needs one. */
 /* Evalute a command. */
 void
-eval_cmd (struct dg_node *frontier_node)
+eval_cmd (struct command *frontier_node)
 {
   int argc;
   char **argv;
   struct arglist *args;
   int i;
 
-  DBG("EVAN_CMD: command: %s\n", frontier_node->cmd->ccmd.cmd);
+  DBG("EVAN_CMD: command: %s\n", frontier_node->cmd->ccmd.cmdstr);
   /* Construct argument list. Start ARGC at 1 to account for
      the command itself. */
   args = frontier_node->cmd->ccmd.args;
@@ -65,7 +65,7 @@ eval_cmd (struct dg_node *frontier_node)
 
   /* Copy arguments into ARGV. */
   argv = malloc (sizeof *argv * argc + 1);
-  argv[0] = frontier_node->cmd->ccmd.cmd;
+  argv[0] = frontier_node->cmd->ccmd.cmdstr;
   args = frontier_node->cmd->ccmd.args;
   for (i = 1; i < argc; i++)
     {
@@ -80,7 +80,7 @@ eval_cmd (struct dg_node *frontier_node)
 
 /* Execute the command. */
 static void
-forkexec (union command *command, char **argv)
+forkexec (union cmd *command, char **argv)
 {
   struct ccmd *cmd = (struct ccmd *) command;
 
@@ -131,12 +131,12 @@ forkexec (union command *command, char **argv)
         }
 
       char **env = {NULL};
-      char *cmdpath = findpath (cmd->cmd);
+      char *cmdpath = findpath (cmd->cmdstr);
       DBG("CMD: %s\n", cmdpath);
       if (cmdpath)
         execve (cmdpath, argv, env);
       else
-        printf ("%s: command not found.\n", cmd->cmd);
+        printf ("%s: command not found.\n", cmd->cmdstr);
     }
   else if (pid < 0) 
     abort ();

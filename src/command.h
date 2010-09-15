@@ -32,6 +32,7 @@ enum
     SUBSHELL
   };
 
+/* Redirection type. */
 enum
   {
     NO_REDIR,
@@ -43,7 +44,7 @@ enum
     DUPE_OUT
   };
 
-union command;
+union cmd;
 
 /* Arguments. */
 struct arglist
@@ -65,7 +66,7 @@ struct redir
 struct ccmd
 {
   int type;                      /* Command type. */
-  char *cmd;                     /* The command. */
+  char *cmdstr;                  /* The command. */
   struct arglist *args;          /* List of arguments. */
   struct redir *redirs;          /* List of redirections. */
 };
@@ -74,17 +75,32 @@ struct ccmd
 struct cif
 {
   int type;                      /* Command type. */
-  union command *cif_cond;       /* If command condition. */
-  union command *cif_then;       /* If command then part. */
-  union command *cif_else;       /* If command else part. */
+  union cmd *cif_cond;           /* If command condition. */
+  union cmd *cif_then;           /* If command then part. */
+  union cmd *cif_else;           /* If command else part. */
 };
 
 /* Command types. */
-union command
+union cmd
 {
   int type;
   struct ccmd ccmd;
   struct cif cif;
 };
+
+/* Command structure for interation with file hash. */
+struct command
+{
+  int dependencies;              /* Dependencies. */
+  struct command *parent;        /* Parent node. */
+  union cmd *cmd;            /* Command. */
+  /* Loop control. */
+  unsigned long iter;            /* Iteration of parent loop. */
+  int nest;                      /* Nest level of command. */
+  /* Frontier control. */
+  struct command *next;          /* Next node in frontier. */
+  struct command *prev;          /* Previous node in frontier. */
+};
+
 
 #endif

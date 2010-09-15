@@ -21,14 +21,14 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#include "dgraph.h"
+#include "command.h"
 #include "parsh.h"
 
 #include "frontier.h"
 
 static struct frontier frontier;
-static pthread_mutex_t dg_lock;
-static pthread_cond_t dg_cond;
+static pthread_mutex_t frnt_lock;
+static pthread_cond_t frnt_cond;
 
 
 /* Initialize the frontier data structure. */
@@ -39,8 +39,8 @@ frontier_init (void)
   frontier.run_next = NULL;
   frontier.tail = NULL;
   frontier.eof = false;
-  pthread_mutex_init (&dg_lock, NULL);
-  pthread_cond_init (&dg_cond, NULL);
+  pthread_mutex_init (&frnt_lock, NULL);
+  pthread_cond_init (&frnt_cond, NULL);
 }
 
 
@@ -48,7 +48,7 @@ frontier_init (void)
 void
 frontier_lock (void)
 {
-  pthread_mutex_lock (&dg_lock);
+  pthread_mutex_lock (&frnt_lock);
   DBG("MUTEX LOCKED\n");
 }
 
@@ -56,50 +56,50 @@ void
 frontier_unlock (void)
 {
   DBG("MUTEX UNLOCKED\n");
-  pthread_mutex_unlock (&dg_lock);
+  pthread_mutex_unlock (&frnt_lock);
 }
 
 
 /* Add a graph node to the frontier. */
 void
-frontier_add (struct dg_node *node)
+frontier_add (struct command *command)
 {
   /* Insert NODE into runnables list. */
   if (!frontier.run_list)
     {
-      frontier.run_list = node;
-      frontier.run_next = node;
+      frontier.run_list = command;
+      frontier.run_next = command;
     }
   else if (!frontier.run_next)
     {
-      frontier.run_next = node;
+      frontier.run_next = command;
     }
   /* Set NODE as TAIL. */
   if (frontier.tail)
     {
-      node->prev = frontier.tail;
-      frontier.tail->next = node;
+      command->prev = frontier.tail;
+      frontier.tail->next = command;
     }
-  frontier.tail = node;
+  frontier.tail = command;
 
   /* Signal threads waiting on cond var. */
   DBG("FRONTIER_ADD: cond signal\n");
-  pthread_cond_signal (&dg_cond);
+  pthread_cond_signal (&frnt_cond);
 }
 
 
 /* Return RUN NEXT node for evaluation. */
-struct dg_node *
+struct command *
 frontier_run (void)
 {
-  DG_LOCK;
-  struct dg_node *run;
+  FRNT_LOCK;
+  struct command *run;
 
   /* Conditional wait until RUN NEXT is available. */
   while (!frontier.run_next)
     {
       DBG("FRONTIER_RUN: waiting.\n");
-      pthread_cond_wait (&dg_cond, &dg_lock);
+      pthread_cond_wait (&frnt_cond, &frnt_lock);
       DBG("FRONTIER_RUN: got run_next: %p\n", frontier.run_next);
     }
   run = frontier.run_next;
@@ -107,6 +107,6 @@ frontier_run (void)
   /* Update frontier. */
   frontier.run_next = run->next;
 
-  DG_UNLOCK;
+  FRNT_UNLOCK;
   return run;
 }

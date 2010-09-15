@@ -23,24 +23,24 @@
 #include <stdbool.h>
 #include <pthread.h>
 
-#include "dgraph.h"
+#include "command.h"
 
 /* Frontier. */
 struct frontier
 {
-  struct dg_node *run_list;      /* Running/runnable commands. */
-  struct dg_node *run_next;      /* Next runnable command. */
-  struct dg_node *tail;          /* Tail of frontier. */
+  struct command *run_list;      /* Running/runnable commands. */
+  struct command *run_next;      /* Next runnable command. */
+  struct command *tail;          /* Tail of frontier. */
   bool eof;                      /* End of file flag. */
 };
 
 void frontier_init (void);
 void frontier_lock (void);
 void frontier_unlock (void);
-void frontier_add (struct dg_node *);
-struct dg_node * frontier_run (void);
+void frontier_add (struct command *);
+struct command * frontier_run (void);
 
-#define DG_LOCK frontier_lock ();
-#define DG_UNLOCK frontier_unlock ();
+#define FRNT_LOCK frontier_lock ();
+#define FRNT_UNLOCK frontier_unlock ();
 
 #endif

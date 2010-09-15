@@ -20,8 +20,8 @@
 #ifndef EVAL_H
 #define EVAL_H
 
-#include "dgraph.h"
+#include "command.h"
 
-void eval_cmd (struct dg_node *command);
+void eval_cmd (struct command *command);
 
 #endif

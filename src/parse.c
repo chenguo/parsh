@@ -24,7 +24,7 @@
 #include <string.h>
 
 #include "command.h"
-#include "dgraph.h"
+#include "file.h"
 #include "parsh.h"
 
 #include "parse.h"
@@ -307,10 +307,10 @@ redir_type (char *redir)
 }
 
 /* Parse a command, converting it into a command tree. */
-static struct dg_node *
+static union cmd *
 parse_command (struct arglist *args)
 {
-  union command *cmdtree;
+  union cmd *cmdtree;
 
   if (strcmp (args->arg, "if") == 0)
     {
@@ -335,10 +335,10 @@ parse_command (struct arglist *args)
   else
     {
       /* Regular command. */
-      cmdtree = (union command *) malloc (sizeof (struct ccmd));
+      cmdtree = (union cmd *) malloc (sizeof (struct ccmd));
       cmdtree->type = COMMAND;
       /* First argument is the command itself. */
-      cmdtree->ccmd.cmd = args->arg;
+      cmdtree->ccmd.cmdstr = args->arg;
       /* Step through remaining tokens, separating arguments from
          redirections. */
       struct arglist **argp = &cmdtree->ccmd.args;
@@ -385,9 +385,7 @@ parse_command (struct arglist *args)
             }
         }
     }
-
-  /* Create a graph node. */
-  return dg_create (cmdtree);
+  return cmdtree;
 }
 
 
@@ -412,10 +410,10 @@ parse_input (FILE *input)
   //print_args(args);
 
   /* Recursively process tokens and build command tree. */
-  struct dg_node *new_node = parse_command (args);
-  if (new_node)
+  union cmd *cmdtree = parse_command (args);
+  if (cmdtree)
     {
-      dg_add (new_node);
+      file_add_command (cmdtree);
       return true;
     }
   return false;
