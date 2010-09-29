@@ -26,7 +26,7 @@
 struct var_acc
 {
   struct var_acc *next;          /* Next accessor. */
-  struct dg_node *acc;           /* Graph node of accessor. */
+  struct command *acc;           /* Accessor. */
   //union node *arg;
 };
 
@@ -61,7 +61,7 @@ struct var_state_list
 void var_init (void);
 struct var_state * var_create_state (const char *);
 void var_write_state (struct var_state *, const char *);
-void var_queue_state (struct dg_node *, struct var_state *);
+void var_queue_state (struct command *, struct var_state *);
 struct var_state * var_read_state (const char *);
 
 #endif

@@ -66,63 +66,98 @@ file_add (char *file)
   return fpp;
 }
 
-/* Add an accessor to a file/files in the hash. */
-static void
-file_add_accessor (struct redir *redirs, struct dg_node *node)
+/* Check if a new accessor to a file is blocked. */
+static bool
+file_dep_check (struct file* file, struct file_acc *new_acc)
 {
-  /* Parse file accesses. */
+  /* Base case. */
+  if (file->accessors == new_acc)
+    return false;
 
-  /* Add graph_node as accessor. If no file in hash,
-     create an entry. */
-  while (redirs)
+  /* Accessor is not first in line. */
+  if (new_acc->access == WRITE_ACCESS)
     {
-      /* Create new accessor struct. */
-      struct file_acc *new_acc = malloc (sizeof *new_acc);
-      switch (redirs->type)
+      /* Any write is blocked. */
+      return true;
+    }
+  else
+    {
+      struct file_acc *acc = file->accessors;
+      while (acc != new_acc)
         {
-        case FILE_IN:
-          new_acc->access = READ_ACCESS;
-          break;
-        case FILE_OUT:
-        case FILE_CLOBBER:
-        case FILE_APPEND:
-          new_acc->access = WRITE_ACCESS;
-        }
-      new_acc->node = node;
-      new_acc->next = NULL;
-
-      /* File the file being accessed. */
-      struct file *file = *file_find (file_hash (redirs->file), redirs->file);
-      if (file)
-        {
-          /* File already hashed. Set pointers. */
-          if (file->acc_tail)
-            file->acc_tail->next = new_acc;
-          else
-            file->accessors = new_acc;
-
-          file->acc_tail = new_acc;
-        }
-      else
-        {
-          /* File not yet hashed. Hash it. */
-          file = *file_add (redirs->file);
-          file->accessors = new_acc;
-          file->acc_tail = new_acc;
+          /* Any write will block. */
+          if (acc->access == WRITE_ACCESS)
+            return true;
+          acc = acc->next;
         }
     }
+  return false;
+}
+
+/* Add an accessor to a file in the hash. If the file is not yet in hash,
+   add it to the file hash.  */
+static bool
+file_add_accessor (struct redir *redirs, struct command *acc)
+{
+  /* Create new accessor struct. */
+  struct file_acc *new_acc = malloc (sizeof *new_acc);
+  switch (redirs->type)
+    {
+    case FILE_IN:
+      new_acc->access = READ_ACCESS;
+      break;
+    case FILE_OUT:
+    case FILE_CLOBBER:
+    case FILE_APPEND:
+      new_acc->access = WRITE_ACCESS;
+    }
+  new_acc->cmd = acc;
+  new_acc->next = NULL;
+
+  /* Find the file being accessed. */
+  struct file *file = *file_find (file_hash (redirs->file), redirs->file);
+  if (file)
+    {
+      /* File already hashed. Set pointers. */
+      if (file->acc_tail)
+        file->acc_tail->next = new_acc;
+      else
+        file->accessors = new_acc;
+
+      file->acc_tail = new_acc;
+    }
+  else
+    {
+      /* File not yet hashed. Hash it. */
+      file = *file_add (redirs->file);
+      file->accessors = new_acc;
+      file->acc_tail = new_acc;
+    }
+
+  return file_dep_check (file, new_acc);
 }
 
 /* Add a command's file accesses to the hash table. */
 void
-file_add_command (union cmd *new_cmd)
+file_add_command (union cmdtree *new_cmd)
 {
   struct command *new_command = calloc (1, sizeof *new_command);
-  new_command->cmd = new_cmd;
+  new_command->cmdtree = new_cmd;
 
   FILE_LOCK;
+  /* Check dependencies. */
+  struct redir *redirs = ct_extract_redirs (new_cmd);
 
+  /* For each file, add to hash. */
+  while (redirs)
+    {
+      DBG("FILE ADD COMMAND: file: %s\n", redirs->file);
+      if (file_add_accessor (redirs, new_command))
+        new_command->dependencies++;
+      redirs = redirs->next;
+    }
 
+  DBG("FILE ADD COMMAND: dependencies: %d\n", new_command->dependencies);
 
   /* Add to frontier if no dependencies. */
   if (new_command->dependencies == 0)

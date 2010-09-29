@@ -44,7 +44,7 @@ enum
     DUPE_OUT
   };
 
-union cmd;
+union cmdtree;
 
 /* Arguments. */
 struct arglist
@@ -75,13 +75,13 @@ struct ccmd
 struct cif
 {
   int type;                      /* Command type. */
-  union cmd *cif_cond;           /* If command condition. */
-  union cmd *cif_then;           /* If command then part. */
-  union cmd *cif_else;           /* If command else part. */
+  union cmdtree *cif_cond;       /* If command condition. */
+  union cmdtree *cif_then;       /* If command then part. */
+  union cmdtree *cif_else;       /* If command else part. */
 };
 
 /* Command types. */
-union cmd
+union cmdtree
 {
   int type;
   struct ccmd ccmd;
@@ -93,7 +93,7 @@ struct command
 {
   int dependencies;              /* Dependencies. */
   struct command *parent;        /* Parent node. */
-  union cmd *cmd;            /* Command. */
+  union cmdtree *cmdtree;        /* Command tree. */
   /* Loop control. */
   unsigned long iter;            /* Iteration of parent loop. */
   int nest;                      /* Nest level of command. */
@@ -102,5 +102,7 @@ struct command
   struct command *prev;          /* Previous node in frontier. */
 };
 
+
+struct redir * ct_extract_redirs (union cmdtree *);
 
 #endif

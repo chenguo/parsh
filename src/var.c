@@ -141,7 +141,7 @@ var_write_state (struct var_state *state, const char *assnstr)
 
 /* Attach an accessor to a state. */
 void
-var_queue_state (struct dg_node *node, struct var_state *state)
+var_queue_state (struct command *node, struct var_state *state)
 {
   VAR_LOCK;
   if (!state->val)

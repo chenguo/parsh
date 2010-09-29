@@ -307,10 +307,10 @@ redir_type (char *redir)
 }
 
 /* Parse a command, converting it into a command tree. */
-static union cmd *
+static union cmdtree *
 parse_command (struct arglist *args)
 {
-  union cmd *cmdtree;
+  union cmdtree *cmdtree;
 
   if (strcmp (args->arg, "if") == 0)
     {
@@ -335,7 +335,7 @@ parse_command (struct arglist *args)
   else
     {
       /* Regular command. */
-      cmdtree = (union cmd *) malloc (sizeof (struct ccmd));
+      cmdtree = (union cmdtree *) malloc (sizeof (struct ccmd));
       cmdtree->type = COMMAND;
       /* First argument is the command itself. */
       cmdtree->ccmd.cmdstr = args->arg;
@@ -384,6 +384,8 @@ parse_command (struct arglist *args)
 
             }
         }
+      /* Delimit the arguments linked list. */
+      *argp = NULL;
     }
   return cmdtree;
 }
@@ -407,10 +409,10 @@ parse_input (FILE *input)
   struct arglist *args = parse_token (input);
   if (!args)
     return true;
-  //print_args(args);
+  print_args(args);
 
   /* Recursively process tokens and build command tree. */
-  union cmd *cmdtree = parse_command (args);
+  union cmdtree *cmdtree = parse_command (args);
   if (cmdtree)
     {
       file_add_command (cmdtree);

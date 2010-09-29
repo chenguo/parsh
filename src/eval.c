@@ -32,7 +32,7 @@
 #include "eval.h"
 
 
-static void forkexec (union cmd *, char **);
+static void forkexec (union cmdtree *, char **);
 static char *findpath (const char *);
 
 /* TODO: specify return value. I have a feeling this function needs one. */
@@ -45,16 +45,16 @@ eval_cmd (struct command *frontier_node)
   struct arglist *args;
   int i;
 
-  DBG("EVAN_CMD: command: %s\n", frontier_node->cmd->ccmd.cmdstr);
+  DBG("EVAN_CMD: command: %s\n", frontier_node->cmdtree->ccmd.cmdstr);
   /* Construct argument list. Start ARGC at 1 to account for
      the command itself. */
-  args = frontier_node->cmd->ccmd.args;
-  for (argc = 1; args; args = args->next, argc++)
-    DBG("EVAL_CMD: arg %s\n", args->arg);
+  args = frontier_node->cmdtree->ccmd.args;
+  for (argc = 1; args, argc < 2; args = args->next, argc++)
+    DBG("EVAL_CMD: arg %s, %x\n", args->arg, args);
   DBG("EVAL_CMD: argc: %d\n", argc);
 
   /* Print each file redirection. */
-  struct redir *redirp = frontier_node->cmd->ccmd.redirs;
+  struct redir *redirp = frontier_node->cmdtree->ccmd.redirs;
   DBG("EVAL_CMD: output files: ");
   while (redirp)
     {
@@ -65,8 +65,8 @@ eval_cmd (struct command *frontier_node)
 
   /* Copy arguments into ARGV. */
   argv = malloc (sizeof *argv * argc + 1);
-  argv[0] = frontier_node->cmd->ccmd.cmdstr;
-  args = frontier_node->cmd->ccmd.args;
+  argv[0] = frontier_node->cmdtree->ccmd.cmdstr;
+  args = frontier_node->cmdtree->ccmd.args;
   for (i = 1; i < argc; i++)
     {
       argv[i] = args->arg;
@@ -74,13 +74,13 @@ eval_cmd (struct command *frontier_node)
     }
   argv[i] = NULL;
 
-  forkexec (frontier_node->cmd, argv);
+  forkexec (frontier_node->cmdtree, argv);
 }
 
 
 /* Execute the command. */
 static void
-forkexec (union cmd *command, char **argv)
+forkexec (union cmdtree *command, char **argv)
 {
   struct ccmd *cmd = (struct ccmd *) command;
 

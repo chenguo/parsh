@@ -48,13 +48,12 @@ struct file
 struct file_acc
 {
   int access;                    /* Access type. */
-  struct dg_node *node;          /* Graph node of command. */
+  struct command *cmd;      /* Graph node of command. */
   struct file_acc *next;         /* Next accessor. */
 };
 
 
 void file_init (void);
-//void file_add_accessor (struct redir *, struct dg_node *);
-void file_add_command (union cmd *);
+void file_add_command (union cmdtree *);
 
 #endif

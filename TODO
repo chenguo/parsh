@@ -1,14 +1,8 @@
 Immediate:
-
-File dependency hash:
-     file.c: implementation
-     dgraph.c: still necessary? Could we get away with a file tree hash of
-               queued commands, and a frontier?
-       maybe... file hash as a dependency lookup, for adding to the graph.
-       Then the graph will be the actual dependency graph.
-Basic dependency
+Flesh out reap loop.
 EXEC
 
 
 Long term:
-Too many to list. But perhaps most difficult to do: write a good parser.
+Merge in old code for things like IF, WHILE, etc etc.
+Too many small things to list. But perhaps most difficult to do: write a good parser.

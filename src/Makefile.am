@@ -2,4 +2,4 @@
 CFLAGS = -Wall -D_GNU_SOURCE
 
 bin_PROGRAMS = parsh
-parsh_SOURCES = eval.c file.c frontier.c main.c parse.c parsh.c var.c
+parsh_SOURCES = command.c eval.c file.c frontier.c main.c parse.c parsh.c var.c

@@ -4,7 +4,7 @@
 AC_PREREQ([2.60])
 AC_INIT([Paralle Shall], [0.01], [chen.guo.0625@gmail.com])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
-AC_CONFIG_SRCDIR([src/dgraph.c])
+AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
