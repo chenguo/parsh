@@ -48,9 +48,16 @@ struct file
 struct file_acc
 {
   int access;                    /* Access type. */
-  struct command *cmd;      /* Graph node of command. */
+  struct command *cmd;           /* Accessor command. */
   struct file_acc *next;         /* Next accessor. */
 };
+
+/* List of files, for a command to track what files it is accessing. */
+struct file_list
+{
+  struct file_list *next;        /* Next accessed file. */
+  struct file *file;             /* File being accessed. */
+}
 
 
 void file_init (void);

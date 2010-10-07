@@ -38,8 +38,10 @@ static pthread_mutexattr_t attr;
 #define FTABSIZE 39
 struct file *filetab[FTABSIZE];
 
+static void file_list_add (struct file *, struct list *)
 static struct file ** file_hash (const char *);
 static struct file ** file_find (struct file **, const char *);
+
 
 void
 file_init (void)
@@ -59,6 +61,9 @@ file_add (char *file)
   struct file *new_file = malloc (sizeof *new_file);
   new_file->access = NO_ACCESS;
   new_file->path = file;
+  new_file->accessors = NULL;
+  new_file->acc_tail = NULL;
+
   /* Place struct in hash table. */
   struct file **fpp = file_hash (file);
   new_file->next = *fpp;
@@ -97,11 +102,12 @@ file_dep_check (struct file* file, struct file_acc *new_acc)
 /* Add an accessor to a file in the hash. If the file is not yet in hash,
    add it to the file hash.  */
 static bool
-file_add_accessor (struct redir *redirs, struct command *acc)
+file_add_accessor (struct redir *redir, struct command *acc,
+                   struct file *file)
 {
   /* Create new accessor struct. */
   struct file_acc *new_acc = malloc (sizeof *new_acc);
-  switch (redirs->type)
+  switch (redir->type)
     {
     case FILE_IN:
       new_acc->access = READ_ACCESS;
@@ -114,26 +120,15 @@ file_add_accessor (struct redir *redirs, struct command *acc)
   new_acc->cmd = acc;
   new_acc->next = NULL;
 
-  /* Find the file being accessed. */
-  struct file *file = *file_find (file_hash (redirs->file), redirs->file);
-  if (file)
-    {
-      /* File already hashed. Set pointers. */
-      if (file->acc_tail)
-        file->acc_tail->next = new_acc;
-      else
-        file->accessors = new_acc;
-
-      file->acc_tail = new_acc;
-    }
+  /* Add new accessor to accessor list. */
+  if (file->acc_tail)
+    file->acc_tail->next = new_acc;
   else
-    {
-      /* File not yet hashed. Hash it. */
-      file = *file_add (redirs->file);
-      file->accessors = new_acc;
-      file->acc_tail = new_acc;
-    }
+    file->accessors = new_acc;
+  
+  file->acc_tail = new_acc;
 
+  /* Check dependencies. */
   return file_dep_check (file, new_acc);
 }
 
@@ -143,17 +138,29 @@ file_add_command (union cmdtree *new_cmd)
 {
   struct command *new_command = calloc (1, sizeof *new_command);
   new_command->cmdtree = new_cmd;
+  new_command->files->size = sizeof (struct file_list);
 
   FILE_LOCK;
   /* Check dependencies. */
   struct redir *redirs = ct_extract_redirs (new_cmd);
 
-  /* For each file, add to hash. */
+  /* For each file. */
   while (redirs)
     {
       DBG("FILE ADD COMMAND: file: %s\n", redirs->file);
-      if (file_add_accessor (redirs, new_command))
+
+      /* Find the file being accessed. If not yet hashed, hash it. */
+      struct file *file = *file_find (file_hash (redir->file), redir->file);
+      if (!file)
+        file = *file_add (redirs->file);
+
+      /* Add command as an accessor. */
+      if (file_add_accessor (redirs, new_command, file))
         new_command->dependencies++;
+
+      /* Also add file to command's file-accessed list. */
+      file_list_add (file, new_command->files);
+
       redirs = redirs->next;
     }
 
@@ -163,6 +170,15 @@ file_add_command (union cmdtree *new_cmd)
   if (new_command->dependencies == 0)
     frontier_add (new_command);
   FILE_UNLOCK;
+}
+
+/* Add a file struct to a command's file access list. */
+static void
+file_list_add (struct file *file, struct list *file_list)
+{
+  struct file_list *flist =
+    (struct file_list *) list_append (file_list, file);
+  flist->file = file;
 }
 
 /* Hash function based off of Dash's. */

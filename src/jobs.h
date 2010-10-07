@@ -1,4 +1,4 @@
-/* Common definitions and functions.
+/* Header for job control.
    Copyright (C) 2010 Chen Guo
 
    This program is free software: you can redistribute it and/or modify
@@ -17,30 +17,19 @@
    Written by Chen Guo, chenguo4@ucla.edu.
    Under advisement of Paul Eggert.  */
 
-#include <stdio.h>
+#ifndef JOBS_H
+#define JOBS_H
 
-#define DEBUG
+#include <sys/types.h>
 
-FILE *dbg;
-
-#ifdef DEBUG
-#define DBG(msg...) fprintf (dbg, msg);
-#else
-#define DBG(msg...)
-#endif
-
-struct list
+struct job
 {
-  void *head;                    /* Head node of list. */
-  void *tail;                    /* Last node of list. */
-  size_t size;                   /* Size of each node. */
+  pid_t pid;                     /* Process ID. */
+  struct command *command;       /* Command structure of job. */
 };
 
-struct node
-{
-  void *next;                    /* Psuedo struct for list node. */
-}
+void job_init ();
+void job_add (pid_t, struct command *);
+void job_free ();
 
-void *list_append (struct list *, size_t);
-void *list_behead (struct list *);
-char *strncpy_nul (const char *, size_t);
+#endif

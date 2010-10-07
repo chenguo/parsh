@@ -88,12 +88,13 @@ union cmdtree
   struct cif cif;
 };
 
-/* Command structure for interation with file hash. */
+/* Command structure for interaction with file hash. */
 struct command
 {
   int dependencies;              /* Dependencies. */
-  struct command *parent;        /* Parent node. */
   union cmdtree *cmdtree;        /* Command tree. */
+  struct list files;             /* Files accessed. */
+  struct command *parent;        /* Parent node. */
   /* Loop control. */
   unsigned long iter;            /* Iteration of parent loop. */
   int nest;                      /* Nest level of command. */
