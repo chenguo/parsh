@@ -25,6 +25,7 @@
 #include "eval.h"
 #include "file.h"
 #include "frontier.h"
+#include "jobs.h"
 #include "parse.h"
 #include "var.h"
 
@@ -44,6 +45,7 @@ static void parsh_init ()
   dbg = fopen ("debug", "w");
 #endif
   file_init ();
+  job_init ();
   var_init ();
 }
 
@@ -56,10 +58,10 @@ main (void)
   pthread_t reap;
 
   /* Initialize the frontier. */
-  
+
 
   /* Start the loops. */
-  pthread_create (&eval, NULL, eval_loop, NULL);  
+  pthread_create (&eval, NULL, eval_loop, NULL);
   pthread_create (&reap, NULL, reap_loop, NULL);
   parse_loop (NULL);
 
@@ -105,10 +107,19 @@ parse_loop (void *ignore)
   return NULL;
 }
 
-/* Reap loop. */
+/* Reap loop.
+   TODO: don't blindly loop. Only call job_wait (and by extension waitpid)
+   only when there actually a child process to wait on.
+ */
 static void *
 reap_loop (void *ignore)
 {
+  for (;;)
+  {
+      /* Wait on jobs. */
+      pid_t pid = job_wait ();
+      job_free (pid);
+  }
   return NULL;
 }
 

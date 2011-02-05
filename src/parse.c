@@ -335,7 +335,7 @@ parse_command (struct arglist *args)
   else
     {
       /* Regular command. */
-      cmdtree = (union cmdtree *) malloc (sizeof (struct ccmd));
+      cmdtree = (union cmdtree *) calloc (1, sizeof (struct ccmd));
       cmdtree->type = COMMAND;
       /* First argument is the command itself. */
       cmdtree->ccmd.cmdstr = args->arg;
@@ -402,6 +402,8 @@ parse_command (struct arglist *args)
 bool
 parse_input (FILE *input)
 {
+  DBG("PARSE INPUT\n");
+
   /* Read a line. */
   parse_readline (input);
 

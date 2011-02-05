@@ -17,6 +17,9 @@
    Written by Chen Guo, chenguo4@ucla.edu.
    Under advisement of Paul Eggert.  */
 
+#ifndef PARSH_H
+#define PARSH_H
+
 #include <stdio.h>
 
 #define DEBUG
@@ -24,7 +27,7 @@
 FILE *dbg;
 
 #ifdef DEBUG
-#define DBG(msg...) fprintf (dbg, msg);
+#define DBG(msg...) fprintf (stderr, msg);
 #else
 #define DBG(msg...)
 #endif
@@ -39,8 +42,10 @@ struct list
 struct node
 {
   void *next;                    /* Psuedo struct for list node. */
-}
+};
 
-void *list_append (struct list *, size_t);
+void *list_append (struct list *);
 void *list_behead (struct list *);
 char *strncpy_nul (const char *, size_t);
+
+#endif /* PARSH_H */

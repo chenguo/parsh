@@ -25,11 +25,11 @@
 void *
 list_append (struct list *list)
 {
-  if (!list || !node)
-    return;
+  if (!list)
+    return NULL;
 
-  /* Allocate new node. */
-  void *node = calloc (list->size);
+  /* Allocate new list node. */
+  void *node = calloc (list->size, 1);
 
   /* If list is not empty, set last node in list to point at
      new node. */
@@ -53,7 +53,7 @@ void *
 list_behead (struct list *list)
 {
   if (!list)
-    return;
+    return NULL;
 
   struct node *head = (struct node *) list->head;
   void *new_head = head->next;

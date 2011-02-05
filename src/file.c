@@ -1,4 +1,4 @@
-/* Header for file list and dependency. 
+/* File list and dependency.
    Copyright (C) 2010 Chen Guo
 
    This program is free software: you can redistribute it and/or modify
@@ -38,7 +38,7 @@ static pthread_mutexattr_t attr;
 #define FTABSIZE 39
 struct file *filetab[FTABSIZE];
 
-static void file_list_add (struct file *, struct list *)
+static void file_list_add (struct file *, struct list *);
 static struct file ** file_hash (const char *);
 static struct file ** file_find (struct file **, const char *);
 
@@ -125,24 +125,63 @@ file_add_accessor (struct redir *redir, struct command *acc,
     file->acc_tail->next = new_acc;
   else
     file->accessors = new_acc;
-  
+
   file->acc_tail = new_acc;
 
   /* Check dependencies. */
   return file_dep_check (file, new_acc);
 }
 
+/* Remove an accessor from a file in the hash. If removing this accessor
+   allows other accessors to run, put them in the frontier. */
+static void
+file_remove_accessor (struct file *file, struct command *acc)
+{
+  /* Look through the file's accessors. */
+  struct file_acc *accessor = file->accessors;
+  struct file_acc **acc_pp = &file->accessors;
+  while (accessor)
+    {
+      /* Find the accessor representing ACC. */
+      if (accessor->cmd == acc)
+        {
+          /* Update previous accessor's NEXT field. */
+          *acc_pp = accessor->next;
+
+          /* If next accessor is blocked, and removing this accessor
+             would unblock it, then put it into the fronter. This means:
+             1) Accessor is writer.
+             2) Accessor is the only reader, next accessor is writer.
+          */
+          if (accessor->next && accessor->next->cmd->dependencies == 0 &&
+              (accessor->access == WRITE_ACCESS || accessor->access == RW_ACCESS
+               || (accessor->access == READ_ACCESS
+                   && accessor->next->access != READ_ACCESS
+                   && accessor == file->accessors)))
+            {
+              frontier_add (accessor->next->cmd);
+            }
+
+          free (accessor);
+          break;
+        }
+      acc_pp = &accessor->next;
+      accessor = accessor->next;
+    }
+}
+
 /* Add a command's file accesses to the hash table. */
 void
-file_add_command (union cmdtree *new_cmd)
+file_add_command (union cmdtree *new_cmdtree)
 {
+  /* Allocate command structure to hold command tree. */
   struct command *new_command = calloc (1, sizeof *new_command);
-  new_command->cmdtree = new_cmd;
-  new_command->files->size = sizeof (struct file_list);
+  new_command->cmdtree = new_cmdtree;
+  new_command->files.size = sizeof (struct file_list);
 
   FILE_LOCK;
   /* Check dependencies. */
-  struct redir *redirs = ct_extract_redirs (new_cmd);
+  struct redir *redirs = ct_extract_redirs (new_cmdtree);
 
   /* For each file. */
   while (redirs)
@@ -150,7 +189,7 @@ file_add_command (union cmdtree *new_cmd)
       DBG("FILE ADD COMMAND: file: %s\n", redirs->file);
 
       /* Find the file being accessed. If not yet hashed, hash it. */
-      struct file *file = *file_find (file_hash (redir->file), redir->file);
+      struct file *file = *file_find (file_hash (redirs->file), redirs->file);
       if (!file)
         file = *file_add (redirs->file);
 
@@ -159,7 +198,7 @@ file_add_command (union cmdtree *new_cmd)
         new_command->dependencies++;
 
       /* Also add file to command's file-accessed list. */
-      file_list_add (file, new_command->files);
+      file_list_add (file, &new_command->files);
 
       redirs = redirs->next;
     }
@@ -177,8 +216,39 @@ static void
 file_list_add (struct file *file, struct list *file_list)
 {
   struct file_list *flist =
-    (struct file_list *) list_append (file_list, file);
+    (struct file_list *) list_append (file_list);
   flist->file = file;
+}
+
+/* Remove a command from the hash table. */
+void
+file_remove_command (struct command* command)
+{
+  /* 1) Find files the command uses.
+     2) For those files, remove the command as an accessor.
+  */
+
+  FILE_LOCK;
+  struct redir *redirs = ct_extract_redirs (command->cmdtree);
+
+  /* For each file. */
+  while (redirs)
+    {
+      DBG("FILE REMOVE COMMAND: file: %s\n", redirs->file);
+
+      /* Find the file being accessed. */
+      struct file *file = *file_find (file_hash (redirs->file), redirs->file);
+      if (!file)
+        DBG("FILE REMOVE COMMAND: error: file not hashed\n");
+
+      /* Remove command as an accessor to the file. */
+      file_remove_accessor (file, command);
+
+      redirs = redirs->next;
+    }
+
+  /* TODO: thoroughly free command. */
+  FILE_UNLOCK;
 }
 
 /* Hash function based off of Dash's. */

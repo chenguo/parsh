@@ -26,13 +26,14 @@
 #include <unistd.h>
 
 #include "command.h"
+#include "jobs.h"
 #include "parsh.h"
 #include "var.h"
 
 #include "eval.h"
 
 
-static void forkexec (union cmdtree *, char **);
+static void forkexec (struct command *, char **);
 static char *findpath (const char *);
 
 /* TODO: specify return value. I have a feeling this function needs one. */
@@ -49,8 +50,8 @@ eval_cmd (struct command *frontier_node)
   /* Construct argument list. Start ARGC at 1 to account for
      the command itself. */
   args = frontier_node->cmdtree->ccmd.args;
-  for (argc = 1; args, argc < 2; args = args->next, argc++)
-    DBG("EVAL_CMD: arg %s, %x\n", args->arg, args);
+  for (argc = 1; args && argc < 2; args = args->next, argc++)
+    DBG("EVAL_CMD: arg %s, %p\n", args->arg, args);
   DBG("EVAL_CMD: argc: %d\n", argc);
 
   /* Print each file redirection. */
@@ -74,15 +75,15 @@ eval_cmd (struct command *frontier_node)
     }
   argv[i] = NULL;
 
-  forkexec (frontier_node->cmdtree, argv);
+  forkexec (frontier_node, argv);
 }
 
 
 /* Execute the command. */
 static void
-forkexec (union cmdtree *command, char **argv)
+forkexec (struct command *frontier_node, char **argv)
 {
-  struct ccmd *cmd = (struct ccmd *) command;
+  struct ccmd *cmd = (struct ccmd *) frontier_node->cmdtree;
 
   pid_t pid = fork ();
   if (pid == 0)
@@ -138,7 +139,12 @@ forkexec (union cmdtree *command, char **argv)
       else
         printf ("%s: command not found.\n", cmd->cmdstr);
     }
-  else if (pid < 0) 
+  else if (pid > 0)
+    {
+      /* Create a new entry in the job table. */
+      job_add (pid, frontier_node);
+    }
+  else
     abort ();
 }
 

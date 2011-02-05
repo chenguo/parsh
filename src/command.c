@@ -1,4 +1,4 @@
-/* Header for commands.
+/* Commands.
    Copyright (C) 2010 Chen Guo
 
    This program is free software: you can redistribute it and/or modify
@@ -31,7 +31,9 @@ ct_extract_redirs (union cmdtree *cmdtree)
   switch (cmdtree->type)
     {
     case COMMAND:
-      return ct_copy_redirs (cmdtree->ccmd.redirs);
+      /* For regular command, should be safe to take as is. */
+      return cmdtree->ccmd.redirs;
+      //return ct_copy_redirs (cmdtree->ccmd.redirs);
 
     }
   return NULL;
@@ -40,7 +42,8 @@ ct_extract_redirs (union cmdtree *cmdtree)
 static struct redir *
 ct_copy_redirs (struct redir *redir)
 {
-  struct redir *new_redir;
+  DBG("CT COPY REDIRS: redir %p\n", redir);
+  struct redir *new_redir = NULL;
   struct redir **new_redirp = &new_redir;
   while (redir)
     {

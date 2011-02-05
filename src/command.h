@@ -20,6 +20,8 @@
 #ifndef COMMAND_H
 #define COMMAND_H
 
+#include "parsh.h"
+
 /* Command types. TODO: Make exhaustive. */
 enum
   {
@@ -106,4 +108,4 @@ struct command
 
 struct redir * ct_extract_redirs (union cmdtree *);
 
-#endif
+#endif /* COMMAND_H */

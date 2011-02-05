@@ -57,10 +57,11 @@ struct file_list
 {
   struct file_list *next;        /* Next accessed file. */
   struct file *file;             /* File being accessed. */
-}
+};
 
 
 void file_init (void);
 void file_add_command (union cmdtree *);
+void file_remove_command (struct command *);
 
-#endif
+#endif /* FILE_H */
