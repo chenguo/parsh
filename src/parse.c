@@ -44,8 +44,10 @@ struct buffer
 static struct buffer linbuf;
 static struct buffer tokbuf;
 
+static FILE *input;
+
 /* Initialize the parser. */
-void parse_init (FILE *input)
+void parse_init (FILE *input_arg)
 {
   /* Initialize input buffer. */
   linbuf.siz = DEFAULT_INBUF_SIZE;
@@ -60,7 +62,8 @@ void parse_init (FILE *input)
   tokbuf.lim = tokbuf.buf + tokbuf.siz;
 
   /* Open input stream. */
-  /* fopen (input, 'r'); */
+  input = input_arg;
+  //input = fopen (input_arg, 'r');
 }
 
 
@@ -307,7 +310,7 @@ get_arg_type (char *redir)
   else if (strcmp (redir, "&") == 0)
     return BACKGND;
   else if (strcmp (redir, ";") == 0)
-    return CMD_END;
+    return SEMICOLON;
   else
     return NO_REDIR;
 }
@@ -317,6 +320,18 @@ static union cmdtree *
 parse_command (struct arglist *args)
 {
   union cmdtree *cmdtree;
+
+  if (!args)
+    {
+      /* Read a line. */
+      parse_readline (input);
+
+      /* Break down the line into tokens. */
+      args = parse_token (input);
+      if (!args)
+        return NULL;
+      print_args(args);
+    }
 
   if (strcmp (args->arg, "if") == 0)
     {
@@ -367,10 +382,25 @@ parse_command (struct arglist *args)
               argp = &(*argp)->next;
               args = args->next;
             }
-          else if (arg_type == BACKGND || arg_type == CMD_END)
+          else if (arg_type == BACKGND)
             {
-              /* Ignore these. */
+              /* Ignore this case. */
               args = args->next;
+            }
+          else if (arg_type == SEMICOLON)
+            {
+              /* Get the command after the semicolon. Pass recursive call
+                 remaining ARGS. */
+              union cmdtree *c2 = parse_command (args->next);
+              if (c2)
+                {
+                  union cmdtree *c1 = cmdtree;
+                  cmdtree = (union cmdtree *) calloc (1, sizeof (struct csemi));
+                  cmdtree->type = SEMI;
+                  cmdtree->csemi.cmd1 = c1;
+                  cmdtree->csemi.cmd2 = c2;
+                }
+              break;
             }
           else
             {
@@ -418,20 +448,11 @@ parse_input (FILE *input)
 {
   DBG("PARSE INPUT\n");
 
-  /* Read a line. */
-  parse_readline (input);
-
-  /* Break down the line into tokens. */
-  struct arglist *args = parse_token (input);
-  if (!args)
-    return true;
-  print_args(args);
-
   /* Recursively process tokens and build command tree. */
-  union cmdtree *cmdtree = parse_command (args);
+  union cmdtree *cmdtree = parse_command (NULL);
   if (cmdtree)
     {
-      file_add_command (cmdtree);
+      file_command_process (cmdtree);
       return true;
     }
   return false;

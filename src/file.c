@@ -38,7 +38,8 @@ static pthread_mutexattr_t attr;
 #define FTABSIZE 39
 struct file *filetab[FTABSIZE];
 
-static void file_list_add (struct file *, struct list *);
+static void file_command_add (union cmdtree *);
+static void file_command_list_add (struct file *, struct list *);
 static struct file ** file_hash (const char *);
 static struct file ** file_find (struct file **, const char *);
 
@@ -52,9 +53,9 @@ file_init (void)
   pthread_mutex_init (&file_lock, &attr);
 }
 
-/* Create hash entry for a file. */
+/* Create hash entry for a FILE. */
 static struct file **
-file_add_file (char *file)
+file_file_add (char *file)
 {
   // TODO: Absolute path.
   /* Allocate new file struct. */
@@ -71,9 +72,9 @@ file_add_file (char *file)
   return fpp;
 }
 
-/* Check if a new accessor to a file is blocked. */
+/* Check if a new accessor to a FILE is blocked. */
 static bool
-file_dep_check (struct file* file, struct file_acc *new_acc)
+file_file_dep_check (struct file* file, struct file_acc *new_acc)
 {
   DBG("FILE DEP CHECK: %s\n", file->path);
   DBG("  file: %p\n", file);
@@ -106,10 +107,10 @@ file_dep_check (struct file* file, struct file_acc *new_acc)
   return false;
 }
 
-/* Add an accessor to a file in the hash. If the file is not yet in hash,
+/* Add an accessor ACC to a FILE in the hash. If the FILE is not yet in hash,
    add it to the file hash.  */
 static bool
-file_add_accessor (struct redir *redir, struct command *acc,
+file_file_add_accessor (struct redir *redir, struct command *acc,
                    struct file *file)
 {
   DBG("FILE ADD ACCESSOR: %s\n", file->path);
@@ -138,13 +139,13 @@ file_add_accessor (struct redir *redir, struct command *acc,
   file->acc_tail = new_acc;
 
   /* Check dependencies. */
-  return file_dep_check (file, new_acc);
+  return file_file_dep_check (file, new_acc);
 }
 
 /* Remove an accessor from a file in the hash. If removing this accessor
    allows other accessors to run, put them in the frontier. */
 static void
-file_remove_accessor (struct file *file, struct command *acc)
+file_file_remove_accessor (struct file *file, struct command *acc)
 {
   /* Look through the file's accessors. */
   struct file_acc *accessor = file->accessors;
@@ -189,9 +190,34 @@ file_remove_accessor (struct file *file, struct command *acc)
     }
 }
 
-/* Add a command's file accesses to the hash table. */
+/* Process a CMDTREE for addition into the hash table. */
 void
-file_add_command (union cmdtree *new_cmdtree)
+file_command_process (union cmdtree *cmdtree)
+{
+  /* TODO: handle rest of unsupported command structures. */
+  switch (cmdtree->type)
+    {
+    case IF:
+      /* TODO: handle IF. */
+      return;
+
+    case SEMI:
+      file_command_add (cmdtree->csemi.cmd1);
+      file_command_add (cmdtree->csemi.cmd2);
+      return;
+
+    case COMMAND:
+      /* Regular command. Process below. */
+      file_command_add (cmdtree);
+      return;
+
+    default: return;
+    }
+}
+
+/* Add a command's file accesses to the hash table. */
+static void
+file_command_add (union cmdtree *new_cmdtree)
 {
   /* Allocate command structure to hold command tree. */
   struct command *new_command = calloc (1, sizeof *new_command);
@@ -210,14 +236,14 @@ file_add_command (union cmdtree *new_cmdtree)
       /* Find the file being accessed. If not yet hashed, hash it. */
       struct file *file = *file_find (file_hash (redirs->file), redirs->file);
       if (!file)
-        file = *file_add_file (redirs->file);
+        file = *file_file_add (redirs->file);
 
       /* Add command as an accessor. */
-      if (file_add_accessor (redirs, new_command, file))
+      if (file_file_add_accessor (redirs, new_command, file))
         new_command->dependencies++;
 
       /* Also add file to command's file-accessed list. */
-      file_list_add (file, &new_command->files);
+      file_command_list_add (file, &new_command->files);
 
       redirs = redirs->next;
     }
@@ -237,7 +263,7 @@ file_add_command (union cmdtree *new_cmdtree)
    inserted command also has read access, the inserted command will become
    runnable. */
 void
-file_insert_command (struct command *command)
+file_command_insert (struct command *command)
 {
   FILE_LOCK;
   struct redir *redirs = ct_extract_redirs (command->cmdtree);
@@ -295,18 +321,9 @@ file_insert_command (struct command *command)
   FILE_UNLOCK;
 }
 
-/* Add a file struct to a command's file access list. */
-static void
-file_list_add (struct file *file, struct list *file_list)
-{
-  struct file_list *flist =
-    (struct file_list *) list_append (file_list);
-  flist->file = file;
-}
-
 /* Remove a command from the file hash table. */
 void
-file_remove_command (struct command* command)
+file_command_remove (struct command* command)
 {
   FILE_LOCK;
   struct redir *redirs = ct_extract_redirs (command->cmdtree);
@@ -322,13 +339,22 @@ file_remove_command (struct command* command)
         DBG("FILE REMOVE COMMAND: error: file not hashed\n");
 
       /* Remove command as an accessor to the file. */
-      file_remove_accessor (file, command);
+      file_file_remove_accessor (file, command);
 
       redirs = redirs->next;
     }
 
   /* TODO: thoroughly free command. */
   FILE_UNLOCK;
+}
+
+/* Add a file struct to a command's file access list. */
+static void
+file_command_list_add (struct file *file, struct list *file_list)
+{
+  struct file_list *flist =
+    (struct file_list *) list_append (file_list);
+  flist->file = file;
 }
 
 /* Hash function based off of Dash's. */

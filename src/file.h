@@ -1,4 +1,4 @@
-/* Header for file list and dependency. 
+/* Header for file list and dependency.
    Copyright (C) 2010 Chen Guo
 
    This program is free software: you can redistribute it and/or modify
@@ -61,8 +61,8 @@ struct file_list
 
 
 void file_init (void);
-void file_add_command (union cmdtree *);
-void file_remove_command (struct command *);
-void file_insert_command (struct command *);
+void file_command_process (union cmdtree *);
+void file_command_remove (struct command *);
+void file_command_insert (struct command *);
 
 #endif /* FILE_H */

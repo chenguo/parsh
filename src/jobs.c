@@ -77,7 +77,7 @@ job_free (pid_t pid)
       if (jobtab[i].pid == pid)
         {
           /* Remove the command from the file hash. */
-          file_remove_command (jobtab[i].command);
+          file_command_remove (jobtab[i].command);
           jobtab[i].pid = -1;
           jobtab[i].command = NULL;
         }

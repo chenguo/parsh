@@ -31,7 +31,8 @@ enum
     WHILE,
     CASE,
     PIPE,
-    SUBSHELL
+    SUBSHELL,
+    SEMI
   };
 
 /* Redirection type + some other symbols. */
@@ -45,7 +46,7 @@ enum
     DUPE_IN,
     DUPE_OUT,
     BACKGND,
-    CMD_END
+    SEMICOLON
   };
 
 union cmdtree;
@@ -84,12 +85,21 @@ struct cif
   union cmdtree *cif_else;       /* If command else part. */
 };
 
+/* Semicolon separated. */
+struct csemi
+{
+  int type;                      /* Command type. */
+  union cmdtree *cmd1;           /* Command 1. */
+  union cmdtree *cmd2;           /* Command 2. */
+};
+
 /* Command types. */
 union cmdtree
 {
   int type;
   struct ccmd ccmd;
   struct cif cif;
+  struct csemi csemi;
 };
 
 /* Command structure for interaction with file hash. */
