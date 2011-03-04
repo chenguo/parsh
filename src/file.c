@@ -54,7 +54,7 @@ file_init (void)
 
 /* Create hash entry for a file. */
 static struct file **
-file_add (char *file)
+file_add_file (char *file)
 {
   // TODO: Absolute path.
   /* Allocate new file struct. */
@@ -75,7 +75,12 @@ file_add (char *file)
 static bool
 file_dep_check (struct file* file, struct file_acc *new_acc)
 {
-  /* Base case. */
+  DBG("FILE DEP CHECK: %s\n", file->path);
+  DBG("  file: %p\n", file);
+  DBG("  new_acc: %p\n", new_acc);
+  DBG("  access type: %d\n", new_acc->access);
+
+  /* Base case: accessor has access. */
   if (file->accessors == new_acc)
     return false;
 
@@ -88,7 +93,8 @@ file_dep_check (struct file* file, struct file_acc *new_acc)
   else
     {
       struct file_acc *acc = file->accessors;
-      while (acc != new_acc)
+      DBG("accessors: %p\n", acc);
+      while (acc && acc != new_acc)
         {
           /* Any write will block. */
           if (acc->access == WRITE_ACCESS)
@@ -96,6 +102,7 @@ file_dep_check (struct file* file, struct file_acc *new_acc)
           acc = acc->next;
         }
     }
+
   return false;
 }
 
@@ -105,6 +112,8 @@ static bool
 file_add_accessor (struct redir *redir, struct command *acc,
                    struct file *file)
 {
+  DBG("FILE ADD ACCESSOR: %s\n", file->path);
+
   /* Create new accessor struct. */
   struct file_acc *new_acc = malloc (sizeof *new_acc);
   switch (redir->type)
@@ -140,27 +149,37 @@ file_remove_accessor (struct file *file, struct command *acc)
   /* Look through the file's accessors. */
   struct file_acc *accessor = file->accessors;
   struct file_acc **acc_pp = &file->accessors;
+
   while (accessor)
     {
       /* Find the accessor representing ACC. */
       if (accessor->cmd == acc)
         {
-          /* Update previous accessor's NEXT field. */
-          *acc_pp = accessor->next;
-
+          DBG("  accesssor to be removed found\n");
           /* If next accessor is blocked, and removing this accessor
              would unblock it, then put it into the fronter. This means:
              1) Accessor is writer.
              2) Accessor is the only reader, next accessor is writer.
           */
-          if (accessor->next && accessor->next->cmd->dependencies == 0 &&
+
+          DBG("  Conditions:\n");
+          DBG("    accessor->next: %p\n", accessor->next);
+          DBG("    access: %d\n", accessor->access);
+          DBG("    accessor: %p\n", accessor);
+          DBG("    file->accessors: %p\n", file->accessors);
+          if (accessor->next &&
               (accessor->access == WRITE_ACCESS || accessor->access == RW_ACCESS
                || (accessor->access == READ_ACCESS
                    && accessor->next->access != READ_ACCESS
                    && accessor == file->accessors)))
             {
-              frontier_add (accessor->next->cmd);
+              DBG("    deps: %d\n", accessor->next->cmd->dependencies);
+              if (--accessor->next->cmd->dependencies == 0)
+                frontier_add (accessor->next->cmd);
+
             }
+          /* Update previous accessor's NEXT field. */
+          *acc_pp = accessor->next;
 
           free (accessor);
           break;
@@ -191,7 +210,7 @@ file_add_command (union cmdtree *new_cmdtree)
       /* Find the file being accessed. If not yet hashed, hash it. */
       struct file *file = *file_find (file_hash (redirs->file), redirs->file);
       if (!file)
-        file = *file_add (redirs->file);
+        file = *file_add_file (redirs->file);
 
       /* Add command as an accessor. */
       if (file_add_accessor (redirs, new_command, file))
@@ -211,6 +230,71 @@ file_add_command (union cmdtree *new_cmdtree)
   FILE_UNLOCK;
 }
 
+/* Insert a command into file hash table. For each file the command accesses,
+   the command will be inserted after the currently runnable commands, but
+   before every other command.
+   Note that if the currently runnable commands have read access, and the
+   inserted command also has read access, the inserted command will become
+   runnable. */
+void
+file_insert_command (struct command *command)
+{
+  FILE_LOCK;
+  struct redir *redirs = ct_extract_redirs (command->cmdtree);
+
+  /* For each file. */
+  while (redirs)
+    {
+      DBG("FILE INSERT COMMAND: file: %s\n", redirs->file);
+
+      /* Find the file to be accessed. */
+      struct file *file = *file_find (file_hash (redirs->file), redirs->file);
+      if (!file)
+        DBG("FILE INSERT COMMAND: error: file not hashed\n");
+
+      /* Add command to frontier if both runnables and command are reads. */
+      if (!file->accessors ||
+          (redirs->type == FILE_IN && file->accessors->access == READ_ACCESS))
+        frontier_add (command);
+
+      /* Skip through runnable commands.
+         1. Read access: iterate until end.
+         2. Write access: insert after first accessor.
+         3. No accessor: just set as accessor. */
+      struct file_acc *acc = file->accessors;
+      struct file_acc **accp = &file->accessors;
+      while (acc)
+        {
+          /* Iterate through accessors until write access is found. */
+          accp = &acc->next;
+          if (acc->access != READ_ACCESS)
+            {
+              /* If writer is first accessor, skip over it. Otherwise,
+                 insert before it. */
+              if (acc == file->accessors)
+                acc = acc->next;
+              break;
+            }
+          acc = acc->next;
+        }
+
+      /* Create accessor for command and insert into accessor list. */
+      struct file_acc *new_acc = malloc (sizeof *new_acc);
+      if (redirs->type == FILE_IN)
+        new_acc->access = READ_ACCESS;
+      else if (redirs->type == FILE_OUT && redirs->type == FILE_CLOBBER
+               && redirs->type == FILE_APPEND)
+        new_acc->access = WRITE_ACCESS;
+      new_acc->cmd = command;
+      new_acc->next = acc;
+      *accp = new_acc;
+
+      redirs = redirs->next;
+    }
+
+  FILE_UNLOCK;
+}
+
 /* Add a file struct to a command's file access list. */
 static void
 file_list_add (struct file *file, struct list *file_list)
@@ -220,14 +304,10 @@ file_list_add (struct file *file, struct list *file_list)
   flist->file = file;
 }
 
-/* Remove a command from the hash table. */
+/* Remove a command from the file hash table. */
 void
 file_remove_command (struct command* command)
 {
-  /* 1) Find files the command uses.
-     2) For those files, remove the command as an accessor.
-  */
-
   FILE_LOCK;
   struct redir *redirs = ct_extract_redirs (command->cmdtree);
 

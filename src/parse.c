@@ -44,7 +44,6 @@ struct buffer
 static struct buffer linbuf;
 static struct buffer tokbuf;
 
-
 /* Initialize the parser. */
 void parse_init (FILE *input)
 {
@@ -111,6 +110,8 @@ rmescape (char c)
 static struct arglist *
 parse_token (FILE *input)
 {
+  DBG("PARSE TOKEN\n");
+
   struct arglist *args = NULL;
   struct arglist **argsp = &args;
   char opc = '\0';
@@ -127,12 +128,12 @@ parse_token (FILE *input)
       while (isspace (*linbuf.ptr))
         {
           /* TODO: handle escaped newlines. */
-          /* The entire line has been processed. */
+          /* The entire command has been processed. */
           if (*linbuf.ptr == '\n')
             return args;
           linbuf.ptr++;
         }
-    
+
       /* Get next token. */
       while (1)
         {
@@ -191,7 +192,7 @@ parse_token (FILE *input)
                             ; /* TODO: Unrecognized operator. */
                         }
                       /* Else fall through: delineate previous token. */
-		      op = false;
+                      op = false;
                       goto tokend;
                     }
 
@@ -266,7 +267,7 @@ parse_token (FILE *input)
           /* Allocate a new arglist node, copy token. */
           *argsp = malloc (sizeof **argsp);
           (*argsp)->arg = strncpy_nul (tokbuf.buf, toksiz);
-          DBG("PARSE TOKEN: token: %s, size: %d\n", (*argsp)->arg, toksiz);
+          DBG("  token: %s, size: %d\n", (*argsp)->arg, toksiz);
           /* Update variables. */
           tokbuf.ptr = tokbuf.buf;
           toksiz = 0;
@@ -281,17 +282,18 @@ parse_token (FILE *input)
 static void
 print_args (struct arglist *args)
 {
+  DBG("PRINT ARGS\n");
   while (args)
     {
-      DBG("Token: %s\n", args->arg);
+      DBG("  Token: %s\n", args->arg);
       args = args->next;
     }
 }
 
 
-/* Determine type of redirection. */
+/* Determine type of argument. */
 static int
-redir_type (char *redir)
+get_arg_type (char *redir)
 {
   if (strcmp (redir, "<") == 0)
     return FILE_IN;
@@ -302,6 +304,10 @@ redir_type (char *redir)
   else if (strcmp (redir, ">>") == 0)
     return FILE_APPEND;
   /* TODO: DUPE_IN, DUPE_OUT, support syntax like "2<" */
+  else if (strcmp (redir, "&") == 0)
+    return BACKGND;
+  else if (strcmp (redir, ";") == 0)
+    return CMD_END;
   else
     return NO_REDIR;
 }
@@ -349,13 +355,21 @@ parse_command (struct arglist *args)
       free (free_arg);
       while (args)
         {
-          int arg_type = redir_type (args->arg);
+          int arg_type = get_arg_type (args->arg);
           /* If not an operator, append to arguments list. */
+          /* TODO: maybe more elegant (and proper) way of ignoring
+             ; and & */
+          DBG("  ARG: %s\n", args->arg);
           if (arg_type == NO_REDIR)
             {
               /* Append current argument to command's arguments list. */
               *argp = args;
               argp = &(*argp)->next;
+              args = args->next;
+            }
+          else if (arg_type == BACKGND || arg_type == CMD_END)
+            {
+              /* Ignore these. */
               args = args->next;
             }
           else

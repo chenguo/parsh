@@ -1,7 +1,8 @@
 Immediate:
-Flesh out reap loop.
-EXEC
-
+Implement IF
+Document basic workings
+Support multiple commands on 1 line (i.e. ;)
+Free command sturcture after command finishes.
 
 Long term:
 Merge in old code for things like IF, WHILE, etc etc.

@@ -34,7 +34,7 @@ enum
     SUBSHELL
   };
 
-/* Redirection type. */
+/* Redirection type + some other symbols. */
 enum
   {
     NO_REDIR,
@@ -43,7 +43,9 @@ enum
     FILE_CLOBBER,
     FILE_APPEND,
     DUPE_IN,
-    DUPE_OUT
+    DUPE_OUT,
+    BACKGND,
+    CMD_END
   };
 
 union cmdtree;

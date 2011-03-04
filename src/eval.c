@@ -41,22 +41,23 @@ static char *findpath (const char *);
 void
 eval_cmd (struct command *frontier_node)
 {
+  DBG("EVAL CMD\n");
   int argc;
   char **argv;
   struct arglist *args;
   int i;
 
-  DBG("EVAN_CMD: command: %s\n", frontier_node->cmdtree->ccmd.cmdstr);
+  DBG("  command: %s\n", frontier_node->cmdtree->ccmd.cmdstr);
   /* Construct argument list. Start ARGC at 1 to account for
      the command itself. */
   args = frontier_node->cmdtree->ccmd.args;
-  for (argc = 1; args && argc < 2; args = args->next, argc++)
-    DBG("EVAL_CMD: arg %s, %p\n", args->arg, args);
-  DBG("EVAL_CMD: argc: %d\n", argc);
+  for (argc = 1; args; args = args->next, argc++)
+    DBG("  arg (%s, %p)\n", args->arg, args);
+  DBG("  argc: %d\n", argc);
 
   /* Print each file redirection. */
   struct redir *redirp = frontier_node->cmdtree->ccmd.redirs;
-  DBG("EVAL_CMD: output files: ");
+  DBG("  output files: ");
   while (redirp)
     {
       DBG ("%s ", redirp->file);

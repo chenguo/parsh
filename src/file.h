@@ -63,5 +63,6 @@ struct file_list
 void file_init (void);
 void file_add_command (union cmdtree *);
 void file_remove_command (struct command *);
+void file_insert_command (struct command *);
 
 #endif /* FILE_H */
