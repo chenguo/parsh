@@ -197,16 +197,16 @@ file_command_process (union cmdtree *cmdtree)
   /* TODO: handle rest of unsupported command structures. */
   switch (cmdtree->type)
     {
-    case IF:
+    case CT_IF:
       /* TODO: handle IF. */
       return;
 
-    case SEMI:
+    case CT_SEMICOLON:
       file_command_add (cmdtree->csemi.cmd1);
       file_command_add (cmdtree->csemi.cmd2);
       return;
 
-    case COMMAND:
+    case CT_COMMAND:
       /* Regular command. Process below. */
       file_command_add (cmdtree);
       return;

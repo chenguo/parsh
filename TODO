@@ -4,5 +4,7 @@ Immediate:
 3) Free command sturcture after command finishes.
 
 Long term:
-Merge in old code for things like IF, WHILE, etc etc.
-Too many small things to list. But perhaps most difficult to do: write a good parser.
+Adapt code from modified Dash shell to Parsh. This includes things like IF,
+WHILE/UNTIL, and FOR.
+Too many small things to list... Mostly, be able to parse the subtle
+intricacies of shell scripts and go from there.

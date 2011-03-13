@@ -22,17 +22,17 @@
 
 #include "parsh.h"
 
-/* Command types. TODO: Make exhaustive. */
+/* Command tree types. TODO: Make exhaustive. */
 enum
   {
-    COMMAND,
-    IF,
-    FOR,
-    WHILE,
-    CASE,
-    PIPE,
-    SUBSHELL,
-    SEMI
+    CT_COMMAND,
+    CT_IF,
+    CT_FOR,
+    CT_WHILE,
+    CT_CASE,
+    CT_PIPE,
+    CT_SUBSHELL,
+    CT_SEMICOLON
   };
 
 /* Redirection type + some other symbols. */
@@ -117,7 +117,7 @@ struct command
   struct command *prev;          /* Previous node in frontier. */
 };
 
-
+union cmdtree * ct_alloc (int);
 struct redir * ct_extract_redirs (union cmdtree *);
 
 #endif /* COMMAND_H */
