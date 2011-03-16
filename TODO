@@ -1,5 +1,10 @@
 Immediate:
 1) Implement IF
+  i)   Implement parent node feature - i.e. commands under IF have the IF command as parent.
+  ii)  Keep count of how many commands are in condition part of IF.
+  iii) Implement return value check.
+  iv)  When child of IF condition returns true, insert THEN part into heap. If all conditions
+       have returned, and none were true, then insert ELSE part into heap.
 2) Document basic workings
 3) Free command sturcture after command finishes.
 
