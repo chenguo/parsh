@@ -30,8 +30,8 @@ static struct frontier frontier;
 static pthread_mutex_t frnt_lock;
 static pthread_cond_t frnt_cond;
 
-#define FRNT_LOCK   pthread_mutex_lock (&frnt_lock);
-#define FRNT_UNLOCK pthread_mutex_unlock (&frnt_lock);
+#define FRNT_LOCK   {pthread_mutex_lock (&frnt_lock);}
+#define FRNT_UNLOCK {pthread_mutex_unlock (&frnt_lock);}
 
 /* Initialize the frontier data structure. */
 void

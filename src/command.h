@@ -78,9 +78,11 @@ struct ccmd
 };
 
 /* If. */
+enum {IF_COND, IF_THEN, IF_ELSE};
 struct cif
 {
   int type;                      /* Command type. */
+  int stage;                     /* Execution stage. */
   struct command *cif_cond;      /* If command condition. */
   struct command *cif_then;      /* If command then part. */
   struct command *cif_else;      /* If command else part. */
@@ -109,10 +111,19 @@ struct command
   int dependencies;              /* Dependencies. */
   union cmdtree *cmdtree;        /* Command tree. */
   struct list files;             /* Files accessed. */
+  int status;                    /* Exit status. */
+  /* Nesting. */
   struct command *parent;        /* Parent node. */
+  int children;                  /* Number of children. */
+
+  /* The following loop fields were used in the implementation of the
+     version that was an extension of dash. It remains to be seen if we'll
+     use these or some other control fields for this implementation of
+     loops. */
   /* Loop control. */
   unsigned long iter;            /* Iteration of parent loop. */
   int nest;                      /* Nest level of command. */
+
   /* Frontier control. */
   struct command *next;          /* Next node in frontier. */
   struct command *prev;          /* Previous node in frontier. */
@@ -120,5 +131,7 @@ struct command
 
 struct command * ct_alloc (int, struct command *);
 struct redir * ct_extract_redirs (union cmdtree *);
+void ct_dec_child_count (struct command *);
+void ct_free (struct command *);
 
 #endif /* COMMAND_H */

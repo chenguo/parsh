@@ -30,7 +30,6 @@ struct job
 
 void job_init ();
 void job_add (pid_t, struct command *);
-void job_free ();
 pid_t job_wait ();
 
 #endif /* JOBS_H */

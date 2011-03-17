@@ -17,6 +17,7 @@
    Written by Chen Guo, chenguo4@ucla.edu.
    Under advisement of Paul Eggert.  */
 
+#include <pthread.h>
 #include <stdlib.h>
 #include <sys/wait.h>
 
@@ -27,10 +28,13 @@
 
 #define DEFAULT_JOBTAB_SIZE 16
 
-
 // TODO: job lock
-struct job *jobtab;
-size_t jobtab_size;
+static struct job *jobtab;
+static size_t jobtab_size;
+static pthread_mutex_t job_lock;
+
+#define JOB_LOCK   {pthread_mutex_lock (&job_lock);}
+#define JOB_UNLOCK {pthread_mutex_unlock (&job_lock);}
 
 void
 job_init ()
@@ -42,6 +46,7 @@ job_init ()
     {
       jobtab[i].pid = -1;
     }
+  pthread_mutex_init (&job_lock, NULL);
 }
 
 /* Add a job to the table.
@@ -49,6 +54,8 @@ job_init ()
 void
 job_add (pid_t pid, struct command *command)
 {
+  JOB_LOCK;
+
   /* Find free spot in job table. */
   size_t i = 0;
   do
@@ -61,14 +68,17 @@ job_add (pid_t pid, struct command *command)
   /* Set job fields. */
   jobtab[i].pid = pid;
   jobtab[i].command = command;
-  DBG("JOB_ADD: Process %d set as job %d\n", pid, i);
+  DBG("JOB_ADD: Process %d set as job %ld\n", pid, i);
+
+  JOB_UNLOCK;
 }
 
-void
-job_free (pid_t pid)
+static void
+job_free (pid_t pid, int status)
 {
   DBG("JOB_FREE: freeing process %d\n", pid);
 
+  JOB_LOCK;
   /* Find job in table. */
   size_t i = 0;
   do
@@ -77,12 +87,13 @@ job_free (pid_t pid)
       if (jobtab[i].pid == pid)
         {
           /* Remove the command from the file hash. */
-          file_command_remove (jobtab[i].command);
+          file_command_remove (jobtab[i].command, status);
           jobtab[i].pid = -1;
           jobtab[i].command = NULL;
         }
     }
   while (++i < jobtab_size);
+  JOB_UNLOCK;
 }
 
 /* Wait on child processes, return PID of finished ones. */
@@ -90,16 +101,12 @@ pid_t
 job_wait ()
 {
   pid_t pid = -1;
-  int printed = -1000;
+  int status;
   while (pid <= 0)
     {
-      pid = waitpid (-1, NULL, 0);
-      if ((pid == 0 || pid == -1) && printed != pid)
-        {
-          DBG("JOB_WAIT: pid is %d\n", pid);
-          printed = pid;
-        }
+      pid = waitpid (-1, &status, 0);
     }
-  DBG("JOB_WAIT: pid: %d\n", pid);
+  DBG("JOB_WAIT: pid: %d, status %d\n", pid, status);
+  job_free (pid, status);
   return pid;
 }

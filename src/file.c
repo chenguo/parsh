@@ -31,15 +31,16 @@
 static pthread_mutex_t file_lock;
 static pthread_mutexattr_t attr;
 
-#define FILE_LOCK {pthread_mutex_lock (&file_lock);}
+#define FILE_LOCK   {pthread_mutex_lock (&file_lock);}
 #define FILE_UNLOCK {pthread_mutex_unlock (&file_lock);}
 
 /* Hash table of file names. */
 #define FTABSIZE 39
 struct file *filetab[FTABSIZE];
 
-static void file_command_add (union cmdtree *);
+static void file_command_add (struct command *);
 static void file_command_list_add (struct file *, struct list *);
+static void file_command_insert (struct command *);
 static struct file ** file_hash (const char *);
 static struct file ** file_find (struct file **, const char *);
 
@@ -192,23 +193,26 @@ file_file_remove_accessor (struct file *file, struct command *acc)
 
 /* Process a CMDTREE for addition into the hash table. */
 void
-file_command_process (struct command *cmd)
+file_command_process (struct command *cmd, bool insert)
 {
   /* TODO: handle rest of unsupported command structures. */
   switch (cmd->cmdtree->type)
     {
     case CT_IF:
-      /* TODO: handle IF. */
+      file_command_process (cmd->cmdtree->cif.cif_cond, insert);
       return;
 
     case CT_SEMICOLON:
-      file_command_process (cmd->cmdtree->csemi.cmd1);
-      file_command_process (cmd->cmdtree->csemi.cmd2);
+      file_command_process (cmd->cmdtree->csemi.cmd1, insert);
+      file_command_process (cmd->cmdtree->csemi.cmd2, insert);
       return;
 
     case CT_COMMAND:
       /* Regular command. Process below. */
-      file_command_add (cmd->cmdtree);
+      if (insert)
+        file_command_insert (cmd);
+      else
+        file_command_add (cmd);
       return;
 
     default: return;
@@ -217,16 +221,11 @@ file_command_process (struct command *cmd)
 
 /* Add a command's file accesses to the hash table. */
 static void
-file_command_add (union cmdtree *new_cmdtree)
+file_command_add (struct command *new_command)
 {
-  /* Allocate command structure to hold command tree. */
-  struct command *new_command = calloc (1, sizeof *new_command);
-  new_command->cmdtree = new_cmdtree;
-  new_command->files.size = sizeof (struct file_list);
-
   FILE_LOCK;
   /* Check dependencies. */
-  struct redir *redirs = ct_extract_redirs (new_cmdtree);
+  struct redir *redirs = ct_extract_redirs (new_command->cmdtree);
 
   /* For each file. */
   while (redirs)
@@ -262,11 +261,12 @@ file_command_add (union cmdtree *new_cmdtree)
    Note that if the currently runnable commands have read access, and the
    inserted command also has read access, the inserted command will become
    runnable. */
-void
+static void
 file_command_insert (struct command *command)
 {
   FILE_LOCK;
   struct redir *redirs = ct_extract_redirs (command->cmdtree);
+  bool blocked = false;
 
   /* For each file. */
   while (redirs)
@@ -278,7 +278,15 @@ file_command_insert (struct command *command)
       if (!file)
         DBG("FILE INSERT COMMAND: error: file not hashed\n");
 
-      /* Add command to frontier if both runnables and command are reads. */
+      /* Command is blocked if file's current running command is a write, or
+         the command we're inserting is a write (the converse is they're all
+         reads, meaning they can run simultaneously. */
+      if (file->accessors &&
+          (file->accessors->access == WRITE_ACCESS ||
+           redirs->type == FILE_OUT || redirs->type == FILE_CLOBBER ||
+           redirs->type == FILE_APPEND))
+        blocked = true;
+
       if (!file->accessors ||
           (redirs->type == FILE_IN && file->accessors->access == READ_ACCESS))
         frontier_add (command);
@@ -318,13 +326,18 @@ file_command_insert (struct command *command)
       redirs = redirs->next;
     }
 
+  /* If the command is not blocked, put into frontier. */
+  if (!blocked)
+    frontier_add (command);
+
   FILE_UNLOCK;
 }
 
 /* Remove a command from the file hash table. */
 void
-file_command_remove (struct command* command)
+file_command_remove (struct command* command, int status)
 {
+  DBG("FILE REMOVE COMMAND: CMD %p  status %d\n", command, status);
   FILE_LOCK;
   struct redir *redirs = ct_extract_redirs (command->cmdtree);
 
@@ -343,8 +356,9 @@ file_command_remove (struct command* command)
 
       redirs = redirs->next;
     }
+  command->status = status;
+  ct_free (command);
 
-  /* TODO: thoroughly free command. */
   FILE_UNLOCK;
 }
 

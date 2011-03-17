@@ -115,11 +115,10 @@ static void *
 reap_loop (void *ignore)
 {
   for (;;)
-  {
+    {
       /* Wait on jobs. */
-      pid_t pid = job_wait ();
-      job_free (pid);
-  }
+      job_wait ();
+    }
   return NULL;
 }
 
@@ -127,5 +126,7 @@ reap_loop (void *ignore)
 static void
 print_prompt (void)
 {
+  /* TODO: add in fancy stuff here like user name, time, all that useless
+     crap. */
   printf (PROMPT);
 }

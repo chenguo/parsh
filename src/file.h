@@ -59,10 +59,11 @@ struct file_list
   struct file *file;             /* File being accessed. */
 };
 
+#define FILE_ADD    false
+#define FILE_INSERT true
 
 void file_init (void);
-void file_command_process (struct command *);
-void file_command_remove (struct command *);
-void file_command_insert (struct command *);
+void file_command_process (struct command *, bool);
+void file_command_remove (struct command *, int);
 
 #endif /* FILE_H */

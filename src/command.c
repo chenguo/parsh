@@ -21,15 +21,22 @@
 #include <string.h>
 
 #include "command.h"
+#include "file.h"
 
-static struct redir * ct_copy_redirs (struct redir *);
+//static struct redir * ct_copy_redirs (struct redir *);
 
 /* Allocate a command tree structure. */
 struct command *
 ct_alloc (int ct_type, struct command *parent)
 {
   struct command *cmd = calloc (1, sizeof (struct command));
-  cmd->parent = parent;
+  if (parent)
+    {
+      cmd->parent = parent;
+      cmd->parent->children++;
+    }
+  cmd->files.size = sizeof (struct file_list);
+  cmd->status = -1;
 
   switch (ct_type)
     {
@@ -38,6 +45,7 @@ ct_alloc (int ct_type, struct command *parent)
       break;
     case CT_IF:
       cmd->cmdtree = (union cmdtree *) calloc (1, sizeof (struct cif));
+      cmd->cmdtree->cif.stage = IF_COND;
       break;
     case CT_FOR:
       break;
@@ -55,8 +63,7 @@ ct_alloc (int ct_type, struct command *parent)
     default:
       break;
     }
-  if (cmd->cmdtree)
-    cmd->cmdtree->type = ct_type;
+  cmd->cmdtree->type = ct_type;
   return cmd;
 }
 
@@ -75,7 +82,7 @@ ct_extract_redirs (union cmdtree *cmdtree)
   return NULL;
 }
 
-/* Copy a set of redirections. */
+/* Copy a set of redirections.
 static struct redir *
 ct_copy_redirs (struct redir *redir)
 {
@@ -90,4 +97,64 @@ ct_copy_redirs (struct redir *redir)
       new_redirp = &(*new_redirp)->next;
     }
   return new_redir;
+}
+*/
+
+ /* Decrease the child count.
+    Not entirely sure if this should be static. Leave exposed for now, if
+    no uses come up, then make this static. */
+void
+ct_dec_child_count (struct command *command)
+{
+  if (--command->children == 0)
+    ct_free (command);
+}
+
+/* Process a command's parent. */
+static void
+ct_parent_process (struct command *command)
+{
+  struct command *parent = command->parent;
+  DBG("CT PARENT PROCESS: PARENT %p\n", parent);
+  if (!parent)
+    return;
+
+  union cmdtree *cmdtree = parent->cmdtree;
+  switch (cmdtree->type)
+    {
+    case CT_IF:
+      /* TODO: implement putting in else part. */
+      if (cmdtree->cif.stage == IF_COND && command->status == 0)
+        {
+          file_command_process (cmdtree->cif.cif_then, FILE_INSERT);
+          cmdtree->cif.stage = IF_THEN;
+        }
+      break;
+    case CT_FOR:
+      break;
+    case CT_WHILE:
+      break;
+    case CT_CASE:
+      break;
+    case CT_PIPE:
+      break;
+    case CT_SUBSHELL:
+      break;
+    case CT_SEMICOLON:
+      if (parent->status != 0)
+        parent->status = command->status;
+      ct_parent_process (parent);
+      break;
+    }
+  ct_dec_child_count (parent);
+}
+
+
+/* Free a command structure. */
+void
+ct_free (struct command *command)
+{
+  DBG("CT FREE\n");
+  ct_parent_process (command);
+  /* TODO: thoroughly free the command and command tree. */
 }

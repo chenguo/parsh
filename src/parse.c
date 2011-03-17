@@ -122,12 +122,12 @@ putc_tok (char c)
 }
 
 
-/* Handle escaped character. */
+/* Handle escaped character.
 static void
 rmescape (char c)
 {
 
-}
+}*/
 
 
 /* Break an input line into tokens. Here line refers to syntactic line,
@@ -289,7 +289,7 @@ parse_token (FILE *input)
           /* Allocate a new arglist node, copy token. */
           *argsp = malloc (sizeof **argsp);
           (*argsp)->arg = strncpy_nul (tokbuf.buf, toksiz);
-          DBG("  token: %s, size: %d\n", (*argsp)->arg, toksiz);
+          DBG("  token: %s, size: %ld\n", (*argsp)->arg, toksiz);
           /* Update variables. */
           tokbuf.ptr = tokbuf.buf;
           toksiz = 0;
@@ -300,7 +300,7 @@ parse_token (FILE *input)
 }
 
 
-/* Print argument list. */
+/* Print argument list.
 static void
 print_args (struct arglist *args)
 {
@@ -310,7 +310,7 @@ print_args (struct arglist *args)
       DBG("  Token: %s\n", args->arg);
       args = args->next;
     }
-}
+}*/
 
 
 /* Free a TOKEN in the global token list. Set the global token list to point
@@ -393,7 +393,7 @@ parse_command (struct command *parent)
   /* First argument is the command itself. */
   command->cmdtree->ccmd.cmdstr = toks->arg;
   next_tok (KEEP_ARG);
-  DBG("PARSE COMMAND: %s\n", command->cmdtree->ccmd.cmdstr);
+  DBG("PARSE COMMAND: CMD: %s, PARENT: %p\n", command->cmdtree->ccmd.cmdstr, parent);
   /* Step through remaining tokens, separating arguments from
      redirections. */
   struct arglist **argp = &command->cmdtree->ccmd.args;
@@ -456,7 +456,7 @@ static struct command *
 parse_command_tree (struct command *parent, FILE *input, char *delim,
                     bool free_delim)
 {
-  DBG("PARSE COMMAND TREE: DELIM %s\n", delim);
+  DBG("PARSE COMMAND TREE: PARENT %p, DELIM %s\n", parent, delim);
   struct command *command;
 
   while (!toks)
@@ -568,7 +568,7 @@ parse_input (FILE *input)
       /* Recursively process tokens and build command tree. */
       struct command *cmd = parse_command_tree (NULL, input, DELIM_NONE, true);
       if (cmd)
-        file_command_process (cmd);
+        file_command_process (cmd, FILE_ADD);
     }
   return !feof (input);
 }
