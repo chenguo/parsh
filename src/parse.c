@@ -374,6 +374,8 @@ delim_match (char *delim, FILE *input)
   while (!toks)
     refill (input);
 
+  /* TODO: in case of "else", "fi" should also be
+     acceptable. */
   DBG("DELIM MATCH: %s  tok: %s\n", delim, toks->arg);
   if (strcmp (toks->arg, delim) == 0)
     return true;
@@ -382,20 +384,20 @@ delim_match (char *delim, FILE *input)
 }
 
 /* Parse a regular command. */
-static union cmdtree *
-parse_command ()
+static struct command *
+parse_command (struct command *parent)
 {
-  union cmdtree *cmdtree;
+  struct command *command;
 
-  cmdtree = ct_alloc (CT_COMMAND);
+  command = ct_alloc (CT_COMMAND, parent);
   /* First argument is the command itself. */
-  cmdtree->ccmd.cmdstr = toks->arg;
+  command->cmdtree->ccmd.cmdstr = toks->arg;
   next_tok (KEEP_ARG);
-  DBG("PARSE COMMAND: %s\n", cmdtree->ccmd.cmdstr);
+  DBG("PARSE COMMAND: %s\n", command->cmdtree->ccmd.cmdstr);
   /* Step through remaining tokens, separating arguments from
      redirections. */
-  struct arglist **argp = &cmdtree->ccmd.args;
-  struct redir **redirp = &cmdtree->ccmd.redirs;
+  struct arglist **argp = &command->cmdtree->ccmd.args;
+  struct redir **redirp = &command->cmdtree->ccmd.redirs;
 
   /* Loop over command arguments. */
   while (toks)
@@ -441,20 +443,21 @@ parse_command ()
     }
   /* Delimit the arguments linked list. */
   *argp = NULL;
-  return cmdtree;
+  return command;
 }
 
 
-/* Parse a command tree. For structured statements like () and
-   IF-THEM-ELSE, etc, a deliminator is specified.
+/* Return a STRUCT COMMAND containing the parsed command tree. For structured
+   statements like () and IF-THEM-ELSE, etc, a deliminator is specified.
 
-   BIG TODO: on encountering a parse error, let user know what the
+   TODO: on encountering a parse error, let user know what the
    error was. */
-static union cmdtree *
-parse_command_tree (FILE *input, char *delim, bool free_delim)
+static struct command *
+parse_command_tree (struct command *parent, FILE *input, char *delim,
+                    bool free_delim)
 {
   DBG("PARSE COMMAND TREE: DELIM %s\n", delim);
-  union cmdtree *cmdtree;
+  struct command *command;
 
   while (!toks)
     {
@@ -468,10 +471,11 @@ parse_command_tree (FILE *input, char *delim, bool free_delim)
       next_tok (FREE_ARG);
 
       /* IF statement. */
-      cmdtree = ct_alloc (CT_IF);
-      cmdtree->cif.cif_cond = parse_command_tree (input, DELIM_THEN, true);
-      cmdtree->cif.cif_then = parse_command_tree (input, DELIM_ELSE, true);
-      cmdtree->cif.cif_else = parse_command_tree (input, DELIM_FI, true);
+      command = ct_alloc (CT_IF, parent);
+      struct cif *cif = &command->cmdtree->cif;
+      cif->cif_cond = parse_command_tree (command, input, DELIM_THEN, true);
+      cif->cif_then = parse_command_tree (command, input, DELIM_ELSE, true);
+      cif->cif_else = parse_command_tree (command, input, DELIM_FI, true);
     }
   else if (strcmp (toks->arg, "for") == 0)
     {
@@ -500,7 +504,7 @@ parse_command_tree (FILE *input, char *delim, bool free_delim)
     }
   else
     {
-      cmdtree = parse_command ();
+      command = parse_command (parent);
     }
 
   /* End conditions:
@@ -508,26 +512,28 @@ parse_command_tree (FILE *input, char *delim, bool free_delim)
      2) Delimiter: get delimiter. */
   if (delim == DELIM_NONE && !toks)
     {
-      return cmdtree;
+      return command;
     }
   else
     {
       /* Get the command after the semicolon. */
-      union cmdtree *c2 = parse_command_tree (input, delim, false);
+      struct command *c2 = parse_command_tree (parent, input, delim, false);
       if (c2)
         {
-          union cmdtree *c1 = cmdtree;
-          cmdtree = ct_alloc (CT_SEMICOLON);
-          cmdtree->csemi.cmd1 = c1;
-          cmdtree->csemi.cmd2 = c2;
+          struct command *c1 = command;
+          command = ct_alloc (CT_SEMICOLON, parent);
+          c1->parent = command;
+          c2->parent = command;
+          command->cmdtree->csemi.cmd1 = c1;
+          command->cmdtree->csemi.cmd2 = c2;
         }
 
       /* At this point, the only left is the delimiter. */
       if (delim_match (delim, input))
         {
-          if (free_delim)
+          if (free_delim && delim != DELIM_NONE)
             next_tok (FREE_ARG);
-          return cmdtree;
+          return command;
         }
       else
         {
@@ -535,7 +541,6 @@ parse_command_tree (FILE *input, char *delim, bool free_delim)
           return NULL;
         }
     }
-  //  return cmdtree;
 }
 
 
@@ -561,9 +566,9 @@ parse_input (FILE *input)
   if (toks)
     {
       /* Recursively process tokens and build command tree. */
-      union cmdtree *cmdtree = parse_command_tree (input, DELIM_NONE, true);
-      if (cmdtree)
-        file_command_process (cmdtree);
+      struct command *cmd = parse_command_tree (NULL, input, DELIM_NONE, true);
+      if (cmd)
+        file_command_process (cmd);
     }
   return !feof (input);
 }

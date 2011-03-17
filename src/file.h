@@ -61,7 +61,7 @@ struct file_list
 
 
 void file_init (void);
-void file_command_process (union cmdtree *);
+void file_command_process (struct command *);
 void file_command_remove (struct command *);
 void file_command_insert (struct command *);
 

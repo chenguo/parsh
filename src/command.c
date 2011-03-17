@@ -25,18 +25,19 @@
 static struct redir * ct_copy_redirs (struct redir *);
 
 /* Allocate a command tree structure. */
-union cmdtree *
-ct_alloc (int ct_type)
+struct command *
+ct_alloc (int ct_type, struct command *parent)
 {
-  union cmdtree *cmdtree = NULL;
+  struct command *cmd = calloc (1, sizeof (struct command));
+  cmd->parent = parent;
 
   switch (ct_type)
     {
     case CT_COMMAND:
-      cmdtree = (union cmdtree *) calloc (1, sizeof (struct ccmd));
+      cmd->cmdtree = (union cmdtree *) calloc (1, sizeof (struct ccmd));
       break;
     case CT_IF:
-      cmdtree = (union cmdtree *) calloc (1, sizeof (struct cif));
+      cmd->cmdtree = (union cmdtree *) calloc (1, sizeof (struct cif));
       break;
     case CT_FOR:
       break;
@@ -49,14 +50,14 @@ ct_alloc (int ct_type)
     case CT_SUBSHELL:
       break;
     case CT_SEMICOLON:
-      cmdtree = (union cmdtree *) calloc (1, sizeof (struct csemi));
+      cmd->cmdtree = (union cmdtree *) calloc (1, sizeof (struct csemi));
       break;
     default:
       break;
     }
-  if (cmdtree)
-    cmdtree->type = ct_type;
-  return cmdtree;
+  if (cmd->cmdtree)
+    cmd->cmdtree->type = ct_type;
+  return cmd;
 }
 
 /* Extracts list of redirections from command tree. */

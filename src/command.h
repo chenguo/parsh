@@ -50,6 +50,7 @@ enum
   };
 
 union cmdtree;
+struct command;
 
 /* Arguments. */
 struct arglist
@@ -80,17 +81,17 @@ struct ccmd
 struct cif
 {
   int type;                      /* Command type. */
-  union cmdtree *cif_cond;       /* If command condition. */
-  union cmdtree *cif_then;       /* If command then part. */
-  union cmdtree *cif_else;       /* If command else part. */
+  struct command *cif_cond;      /* If command condition. */
+  struct command *cif_then;      /* If command then part. */
+  struct command *cif_else;      /* If command else part. */
 };
 
 /* Semicolon separated. */
 struct csemi
 {
   int type;                      /* Command type. */
-  union cmdtree *cmd1;           /* Command 1. */
-  union cmdtree *cmd2;           /* Command 2. */
+  struct command *cmd1;          /* Command 1. */
+  struct command *cmd2;          /* Command 2. */
 };
 
 /* Command types. */
@@ -117,7 +118,7 @@ struct command
   struct command *prev;          /* Previous node in frontier. */
 };
 
-union cmdtree * ct_alloc (int);
+struct command * ct_alloc (int, struct command *);
 struct redir * ct_extract_redirs (union cmdtree *);
 
 #endif /* COMMAND_H */

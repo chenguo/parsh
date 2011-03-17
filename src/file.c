@@ -192,23 +192,23 @@ file_file_remove_accessor (struct file *file, struct command *acc)
 
 /* Process a CMDTREE for addition into the hash table. */
 void
-file_command_process (union cmdtree *cmdtree)
+file_command_process (struct command *cmd)
 {
   /* TODO: handle rest of unsupported command structures. */
-  switch (cmdtree->type)
+  switch (cmd->cmdtree->type)
     {
     case CT_IF:
       /* TODO: handle IF. */
       return;
 
     case CT_SEMICOLON:
-      file_command_process (cmdtree->csemi.cmd1);
-      file_command_process (cmdtree->csemi.cmd2);
+      file_command_process (cmd->cmdtree->csemi.cmd1);
+      file_command_process (cmd->cmdtree->csemi.cmd2);
       return;
 
     case CT_COMMAND:
       /* Regular command. Process below. */
-      file_command_add (cmdtree);
+      file_command_add (cmd->cmdtree);
       return;
 
     default: return;

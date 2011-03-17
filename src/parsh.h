@@ -22,7 +22,7 @@
 
 #include <stdio.h>
 
-#define DEBUG 1
+#define DEBUG 2
 
 FILE *dbg;
 
