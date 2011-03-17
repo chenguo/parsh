@@ -36,8 +36,9 @@
 static void forkexec (struct command *, char **);
 static char *findpath (const char *);
 
-/* TODO: specify return value. I have a feeling this function needs one. */
-/* Evalute a command. */
+/* Evalute a command.
+   TODO: specify some return value. I have a feeling this function
+   will end up needing one. */
 void
 eval_cmd (struct command *frontier_node)
 {

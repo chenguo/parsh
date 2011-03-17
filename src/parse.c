@@ -45,13 +45,18 @@ struct buffer
 };
 
 /* Types of statement delimiters. */
-enum
+#define DELIM_NONE NULL
+#define DELIM_THEN "then"
+#define DELIM_ELSE "else"
+#define DELIM_FI   "fi"
+/*enum
   {
     DELIM_NONE,
     DELIM_THEN,
     DELIM_ELSE,
     DELIM_FI
   };
+*/
 
 /* Buffers. */
 static struct buffer linbuf;
@@ -262,7 +267,7 @@ parse_token (FILE *input)
                   break;
 
                 case '\n':
-                  printf ("> ");
+                  printf (REFILL_PROMPT);
                   parse_readline (input);
                   if (!esc)
                     putc_tok (c);
@@ -310,7 +315,7 @@ print_args (struct arglist *args)
 
 /* Free a TOKEN in the global token list. Set the global token list to point
    at the next token. */
-static struct arglist *
+static void
 next_tok (bool free_string)
 {
   struct arglist *next = toks->next;
@@ -361,50 +366,94 @@ get_arg_type (char *redir)
 
 /* Check if a required delimiter is matched. */
 static bool
-delim_match (int type, FILE *input)
+delim_match (char *delim, FILE *input)
 {
-  if (type == DELIM_NONE)
+  if (delim == DELIM_NONE)
     return true;
 
   while (!toks)
     refill (input);
 
-  char *delim;
-  switch (type)
-    {
-    case DELIM_THEN:
-      delim = "then";
-      break;
-    case DELIM_ELSE:
-      delim = "else";
-      break;
-    case DELIM_FI:
-      delim = "fi";
-      break;
-    default:
-      return false;
-    }
-
   DBG("DELIM MATCH: %s  tok: %s\n", delim, toks->arg);
   if (strcmp (toks->arg, delim) == 0)
-    {
-      next_tok (FREE_ARG);
-      return true;
-    }
+    return true;
   else
     return false;
 }
 
+/* Parse a regular command. */
+static union cmdtree *
+parse_command ()
+{
+  union cmdtree *cmdtree;
 
-/* Parse a command, converting it into a command tree. For structured
-   statements like () and IF-THEM-ELSE, a deliminator is specified.
+  cmdtree = ct_alloc (CT_COMMAND);
+  /* First argument is the command itself. */
+  cmdtree->ccmd.cmdstr = toks->arg;
+  next_tok (KEEP_ARG);
+  DBG("PARSE COMMAND: %s\n", cmdtree->ccmd.cmdstr);
+  /* Step through remaining tokens, separating arguments from
+     redirections. */
+  struct arglist **argp = &cmdtree->ccmd.args;
+  struct redir **redirp = &cmdtree->ccmd.redirs;
+
+  /* Loop over command arguments. */
+  while (toks)
+    {
+      int arg_type = get_arg_type (toks->arg);
+      /* If not an operator, append to arguments list. */
+      /* TODO: maybe more elegant (and proper) way of ignoring
+         ; and & */
+      DBG("    ARG: %s\n", toks->arg);
+      if (arg_type == NO_REDIR)
+        {
+          /* Append current argument to command's arguments list. */
+          *argp = toks;
+          argp = &(*argp)->next;
+          toks = toks->next;
+          DBG("toks: %p\n", toks);
+        }
+      else if (arg_type == BACKGND)
+        {
+          /* Ignore this case. */
+          next_tok (FREE_ARG);
+        }
+      else if (arg_type == SEMICOLON)
+        {
+          next_tok (FREE_ARG);
+          break;
+        }
+      else
+        {
+          /* Create new redirection. */
+          *redirp = malloc (sizeof **redirp);
+          (*redirp)->type = arg_type;
+          (*redirp)->next = NULL;
+          next_tok (FREE_ARG);
+
+          /* Get the redirection target. */
+          (*redirp)->file = toks->arg;
+          (*redirp)->fd = 0;
+          DBG("Redirection added: %s\n", toks->arg);
+          redirp = &(*redirp)->next;
+          next_tok (KEEP_ARG);
+        }
+    }
+  /* Delimit the arguments linked list. */
+  *argp = NULL;
+  return cmdtree;
+}
+
+
+/* Parse a command tree. For structured statements like () and
+   IF-THEM-ELSE, etc, a deliminator is specified.
 
    BIG TODO: on encountering a parse error, let user know what the
    error was. */
 static union cmdtree *
-parse_command (FILE *input, int delim)
+parse_command_tree (FILE *input, char *delim, bool free_delim)
 {
-  DBG("PARSE COMMAND: DELIM %d\n", delim);
+  DBG("PARSE COMMAND TREE: DELIM %s\n", delim);
   union cmdtree *cmdtree;
 
   while (!toks)
@@ -420,11 +469,9 @@ parse_command (FILE *input, int delim)
 
       /* IF statement. */
       cmdtree = ct_alloc (CT_IF);
-      union cmdtree *part = NULL;
-
-      cmdtree->cif.cif_cond = parse_command (input, DELIM_THEN);
-      cmdtree->cif.cif_then = parse_command (input, DELIM_ELSE);
-      cmdtree->cif.cif_else = parse_command (input, DELIM_FI);
+      cmdtree->cif.cif_cond = parse_command_tree (input, DELIM_THEN, true);
+      cmdtree->cif.cif_then = parse_command_tree (input, DELIM_ELSE, true);
+      cmdtree->cif.cif_else = parse_command_tree (input, DELIM_FI, true);
     }
   else if (strcmp (toks->arg, "for") == 0)
     {
@@ -443,96 +490,52 @@ parse_command (FILE *input, int delim)
 
     }
   /* Keywords that are out of place... For now return NULL.
-     TODO: print some kind of error message. */
-  /*  else if (strcmp (toks->arg, "then") == 0
+     TODO: detect if this is out of place, and print some kind of
+     error message. */
+  else if (strcmp (toks->arg, "then") == 0
            || strcmp (toks->arg, "else") == 0
            || strcmp (toks->arg, "fi") == 0)
     {
       return NULL;
-      }*/
+    }
   else
     {
-      while (1)
+      cmdtree = parse_command ();
+    }
+
+  /* End conditions:
+     1) No delimiter: nothing remaining except maybe ";"
+     2) Delimiter: get delimiter. */
+  if (delim == DELIM_NONE && !toks)
+    {
+      return cmdtree;
+    }
+  else
+    {
+      /* Get the command after the semicolon. */
+      union cmdtree *c2 = parse_command_tree (input, delim, false);
+      if (c2)
         {
-          /* Regular command. */
-          cmdtree = ct_alloc (CT_COMMAND);
-          /* First argument is the command itself. */
-          cmdtree->ccmd.cmdstr = toks->arg;
-          next_tok (KEEP_ARG);
-          DBG("PARSE COMMAND: %s\n", cmdtree->ccmd.cmdstr);
-          /* Step through remaining tokens, separating arguments from
-             redirections. */
-          struct arglist **argp = &cmdtree->ccmd.args;
-          struct redir **redirp = &cmdtree->ccmd.redirs;
+          union cmdtree *c1 = cmdtree;
+          cmdtree = ct_alloc (CT_SEMICOLON);
+          cmdtree->csemi.cmd1 = c1;
+          cmdtree->csemi.cmd2 = c2;
+        }
 
-          /* Loop over command arguments. */
-          while (toks)
-            {
-              int arg_type = get_arg_type (toks->arg);
-              /* If not an operator, append to arguments list. */
-              /* TODO: maybe more elegant (and proper) way of ignoring
-                 ; and & */
-              DBG("    ARG: %s\n", toks->arg);
-              if (arg_type == NO_REDIR)
-                {
-                  /* Append current argument to command's arguments list. */
-                  *argp = toks;
-                  argp = &(*argp)->next;
-                  toks = toks->next;
-                  DBG("toks: %p\n", toks);
-                }
-              else if (arg_type == BACKGND)
-                {
-                  /* Ignore this case. */
-                  next_tok (FREE_ARG);
-                }
-              else if (arg_type == SEMICOLON)
-                {
-                  next_tok (FREE_ARG);
-
-                  /* Next up could be another statement, or the delimiter. */
-                  if (delim_match (delim, input))
-                    return cmdtree;
-
-                  /* Get the command after the semicolon. Pass recursive call
-                     remaining ARGS. */
-                  union cmdtree *c2 = parse_command (input, delim);
-                  if (c2)
-                    {
-                      union cmdtree *c1 = cmdtree;
-                      cmdtree = ct_alloc (CT_SEMICOLON);
-                      cmdtree->csemi.cmd1 = c1;
-                      cmdtree->csemi.cmd2 = c2;
-                    }
-                  return cmdtree;
-                }
-              else
-                {
-                  /* Create new redirection. */
-                  *redirp = malloc (sizeof **redirp);
-                  (*redirp)->type = arg_type;
-                  (*redirp)->next = NULL;
-                  next_tok (FREE_ARG);
-
-                  /* Get the redirection target. */
-                  (*redirp)->file = toks->arg;
-                  (*redirp)->fd = 0;
-                  DBG("Redirection added: %s\n", toks->arg);
-                  redirp = &(*redirp)->next;
-                  next_tok (KEEP_ARG);
-                }
-            }
-          /* Delimit the arguments linked list. */
-          *argp = NULL;
-
-          if (delim_match (delim, input))
-            {
-              //next_tok (FREE_ARG);
-              break;
-            }
+      /* At this point, the only left is the delimiter. */
+      if (delim_match (delim, input))
+        {
+          if (free_delim)
+            next_tok (FREE_ARG);
+          return cmdtree;
+        }
+      else
+        {
+          fprintf (stderr, "PARSE ERROR.\n");
+          return NULL;
         }
     }
-  return cmdtree;
+  //  return cmdtree;
 }
 
 
@@ -540,7 +543,7 @@ parse_command (FILE *input, int delim)
    loop.
 
    This function first reads in a line. Then it breaks the line down
-   into individual tokens, and finally creates a command tree out of 
+   into individual tokens, and finally creates a command tree out of
    those tokens, inserting each tree into the graph.
 
    This function will return true until EOF is reached. */
@@ -558,7 +561,7 @@ parse_input (FILE *input)
   if (toks)
     {
       /* Recursively process tokens and build command tree. */
-      union cmdtree *cmdtree = parse_command (input, NULL);
+      union cmdtree *cmdtree = parse_command_tree (input, DELIM_NONE, true);
       if (cmdtree)
         file_command_process (cmdtree);
     }

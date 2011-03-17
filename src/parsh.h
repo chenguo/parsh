@@ -22,15 +22,19 @@
 
 #include <stdio.h>
 
-#define DEBUG
+#define DEBUG 1
 
 FILE *dbg;
 
-#ifdef DEBUG
+#if DEBUG == 1
+#define DBG(msg...) fprintf (dbg, msg);
+#else
+#if DEBUG == 2
 #define DBG(msg...) fprintf (stderr, msg);
 #else
 #define DBG(msg...)
-#endif
+#endif /* DEBUG == 2 */
+#endif /* DEBUG == 1 */
 
 struct list
 {

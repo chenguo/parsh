@@ -40,7 +40,4 @@ void frontier_unlock (void);
 void frontier_add (struct command *);
 struct command * frontier_run (void);
 
-#define FRNT_LOCK frontier_lock ();
-#define FRNT_UNLOCK frontier_unlock ();
-
 #endif

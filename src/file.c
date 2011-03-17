@@ -202,8 +202,8 @@ file_command_process (union cmdtree *cmdtree)
       return;
 
     case CT_SEMICOLON:
-      file_command_add (cmdtree->csemi.cmd1);
-      file_command_add (cmdtree->csemi.cmd2);
+      file_command_process (cmdtree->csemi.cmd1);
+      file_command_process (cmdtree->csemi.cmd2);
       return;
 
     case CT_COMMAND:

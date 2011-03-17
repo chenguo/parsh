@@ -30,6 +30,8 @@ static struct frontier frontier;
 static pthread_mutex_t frnt_lock;
 static pthread_cond_t frnt_cond;
 
+#define FRNT_LOCK   pthread_mutex_lock (&frnt_lock);
+#define FRNT_UNLOCK pthread_mutex_unlock (&frnt_lock);
 
 /* Initialize the frontier data structure. */
 void
@@ -43,27 +45,12 @@ frontier_init (void)
   pthread_cond_init (&frnt_cond, NULL);
 }
 
-
-/* Mutex control. */
-void
-frontier_lock (void)
-{
-  pthread_mutex_lock (&frnt_lock);
-  DBG("MUTEX LOCKED\n");
-}
-
-void
-frontier_unlock (void)
-{
-  DBG("MUTEX UNLOCKED\n");
-  pthread_mutex_unlock (&frnt_lock);
-}
-
-
 /* Add a graph node to the frontier. */
 void
 frontier_add (struct command *command)
 {
+  FRNT_LOCK;
+
   /* Insert NODE into runnables list. */
   if (!frontier.run_list)
     {
@@ -85,6 +72,8 @@ frontier_add (struct command *command)
   /* Signal threads waiting on cond var. */
   DBG("FRONTIER_ADD: cond signal\n");
   pthread_cond_signal (&frnt_cond);
+
+  FRNT_UNLOCK;
 }
 
 
