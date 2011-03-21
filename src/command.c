@@ -33,7 +33,7 @@ ct_alloc (int ct_type, struct command *parent)
   if (parent)
     {
       cmd->parent = parent;
-      cmd->parent->children++;
+      parent->children++;
     }
   cmd->files.size = sizeof (struct file_list);
   cmd->status = -1;
@@ -124,10 +124,18 @@ ct_parent_process (struct command *command)
     {
     case CT_IF:
       /* TODO: implement putting in else part. */
-      if (cmdtree->cif.stage == IF_COND && command->status == 0)
+      if (cmdtree->cif.stage == IF_COND)
         {
-          file_command_process (cmdtree->cif.cif_then, FILE_INSERT);
-          cmdtree->cif.stage = IF_THEN;
+          if (command->status == 0)
+            {
+              file_command_process (cmdtree->cif.cif_then, FILE_INSERT);
+              cmdtree->cif.stage = IF_THEN;
+            }
+          else
+            {
+              file_command_process (cmdtree->cif.cif_else, FILE_INSERT);
+              cmdtree->cif.stage = IF_ELSE;
+            }
         }
       break;
     case CT_FOR:
@@ -143,7 +151,6 @@ ct_parent_process (struct command *command)
     case CT_SEMICOLON:
       if (parent->status != 0)
         parent->status = command->status;
-      ct_parent_process (parent);
       break;
     }
   ct_dec_child_count (parent);

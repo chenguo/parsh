@@ -526,6 +526,7 @@ parse_command_tree (struct command *parent, FILE *input, char *delim,
           c2->parent = command;
           command->cmdtree->csemi.cmd1 = c1;
           command->cmdtree->csemi.cmd2 = c2;
+          command->children = 2;
         }
 
       /* At this point, the only left is the delimiter. */
