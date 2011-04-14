@@ -1,16 +1,31 @@
 Immediate:
-1) Implement IF
-* i)   Implement parent node feature - i.e. commands under IF have the IF command as parent.
-  ii)  Keep count of how many commands are in condition part of IF.
-* iii) Implement return value check.
-* iv)  When child of IF condition returns true, insert THEN part into heap.
-  v)   If all conditions have returned, and none were true, then insert ELSE
-       part into heap.
-2) Document basic workings
-3) Free command sturcture after command finishes.
+- Implement WHILE/UNTIL loop, minus CONTINUE/BREAK.
+   - Similar concept to IF, just IF is repeatedly inserted back into the
+     accessor queue.
+   * i)  Parse
+     ii) Process
+- Free command sturcture after command finishes.
 
 Long term:
-Adapt code from modified Dash shell to Parsh. This includes things like IF,
-WHILE/UNTIL, and FOR.
-Too many small things to list... Mostly, be able to parse the subtle
-intricacies of shell scripts and go from there.
+- The variables hash is implemented. Use it. This includes
+   i)  Parse variable assignments/use.
+   ii) On variable use, replace variable with value.
+- Once we have variables, implement FOR.
+- Once we have both WHILE and FOR, it'd be good to implement CONTINUE and BREAK.
+
+Super long term:
+Worry about subshells. When working with modifying Dash, this proved to be
+kind of a wall. Get around that wall.
+
+Less important:
+- Optimize IF:
+   Right now either THEN or ELSE is inserted after evaluating the CONDITION.
+   If a subpart of the CONDITION evaluates to true, immediately insert the
+   THEN portion.
+- Make IF more flexible: right now, both THEN and ELSE portions are required.
+  Technically only THEN portion is required.
+- Implement ELIF.
+
+Bugs:
+- Noticed this when running make inside Parsh: Bash knows where stdbool.h is.
+  Parsh doesn't. Maybe add something to path?
