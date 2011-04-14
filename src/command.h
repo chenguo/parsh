@@ -20,6 +20,8 @@
 #ifndef COMMAND_H
 #define COMMAND_H
 
+#include <stdbool.h>
+
 #include "parsh.h"
 
 /* Command tree types. TODO: Make exhaustive. */
@@ -29,6 +31,7 @@ enum
     CT_IF,
     CT_FOR,
     CT_WHILE,
+    CT_UNTIL,
     CT_CASE,
     CT_PIPE,
     CT_SUBSHELL,
@@ -88,6 +91,17 @@ struct cif
   struct command *cif_else;      /* If command else part. */
 };
 
+/* WHILE/UNTIL. */
+struct cwhile
+{
+  int type;                      /* Command type. */
+  bool cond_eval;                /* Continue condition of loop. TRUE denotes
+                                    this is a WHILE loop, FALSE, UNTIL. */
+  int iteration;                 /* Iteration number of loop. */
+  struct command *cwhile_cond;   /* Loop conditionl. */
+  struct command *cwhile_body;   /* Loop body. */
+};
+
 /* Semicolon separated. */
 struct csemi
 {
@@ -102,6 +116,7 @@ union cmdtree
   int type;
   struct ccmd ccmd;
   struct cif cif;
+  struct cwhile cwhile;
   struct csemi csemi;
 };
 

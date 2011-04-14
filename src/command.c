@@ -17,6 +17,7 @@
    Written by Chen Guo, chenguo4@ucla.edu.
    Under advisement of Paul Eggert.  */
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -50,6 +51,14 @@ ct_alloc (int ct_type, struct command *parent)
     case CT_FOR:
       break;
     case CT_WHILE:
+      cmd->cmdtree = (union cmdtree *) calloc (1, sizeof (struct cwhile));
+      cmd->cmdtree->cwhile.cond_eval = true;
+      cmd->cmdtree->cwhile.iteration = 0;
+      break;
+    case CT_UNTIL:
+      cmd->cmdtree = (union cmdtree *) calloc (1, sizeof (struct cwhile));
+      cmd->cmdtree->cwhile.cond_eval = false;
+      cmd->cmdtree->cwhile.iteration = 0;
       break;
     case CT_CASE:
       break;

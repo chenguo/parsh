@@ -49,14 +49,8 @@ struct buffer
 #define DELIM_THEN "then"
 #define DELIM_ELSE "else"
 #define DELIM_FI   "fi"
-/*enum
-  {
-    DELIM_NONE,
-    DELIM_THEN,
-    DELIM_ELSE,
-    DELIM_FI
-  };
-*/
+#define DELIM_DO   "do"
+#define DELIM_DONE "done"
 
 /* Buffers. */
 static struct buffer linbuf;
@@ -483,22 +477,38 @@ parse_command_tree (struct command *parent, FILE *input, char *delim,
     }
   else if (strcmp (toks->arg, "while") == 0)
     {
+      /* Skip over the while. */
+      next_tok (FREE_ARG);
 
+      /* WHILE statement. */
+      command = ct_alloc (CT_WHILE, parent);
+      struct cwhile *cwhile = &command->cmdtree->cwhile;
+      cwhile->cwhile_cond = parse_command_tree (command, input, DELIM_DO, true);
+      cwhile->cwhile_body = parse_command_tree (command, input, DELIM_DONE, true);
     }
   else if (strcmp (toks->arg, "until") == 0)
     {
+      /* Skip over the until. */
+      next_tok (FREE_ARG);
 
+      /* UNTIL statement. */
+      command = ct_alloc (CT_UNTIL, parent);
+      struct cwhile *cwhile = &command->cmdtree->cwhile;
+      cwhile->cwhile_cond = parse_command_tree (command, input, DELIM_DO, true);
+      cwhile->cwhile_body = parse_command_tree (command, input, DELIM_DONE, true);
     }
   else if (strcmp (toks->arg, "case") == 0)
     {
 
     }
-  /* Keywords that are out of place... For now return NULL.
+  /* Keywords.
      TODO: detect if this is out of place, and print some kind of
      error message. */
   else if (strcmp (toks->arg, "then") == 0
            || strcmp (toks->arg, "else") == 0
-           || strcmp (toks->arg, "fi") == 0)
+           || strcmp (toks->arg, "fi") == 0
+           || strcmp (toks->arg, "do") == 0
+           || strcmp (toks->arg, "done") == 0)
     {
       return NULL;
     }
