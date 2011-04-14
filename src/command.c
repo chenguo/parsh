@@ -123,7 +123,12 @@ ct_parent_process (struct command *command)
   switch (cmdtree->type)
     {
     case CT_IF:
-      /* TODO: implement putting in else part. */
+      /* TODO: if one part of the condition evaluates to true, we immediately
+         know to insert the THEN part into the frontier. Right now, we're
+         waiting to evaluate the entirety of the conditional part. A fairly
+         obvious optimization would be to immediately insert the THEN part
+         upon encountering one portion of the conditional that evaluates as
+         true, rather than wait for the whole conditional to be evaluated. */
       if (cmdtree->cif.stage == IF_COND)
         {
           if (command->status == 0)
