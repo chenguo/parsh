@@ -58,7 +58,7 @@ var_init (void)
 
   VAR_UNLOCK;
 }
-    
+
 /* Create a new state. */
 struct var_state *
 var_create_state (const char *assnstr)
@@ -72,7 +72,7 @@ var_create_state (const char *assnstr)
 
   new_state->next = NULL;
   new_state->prev = NULL;
-  new_state->val = NULL;  
+  new_state->val = NULL;
   new_state->accessors = 0;
   new_state->acc_list = 0;
 
